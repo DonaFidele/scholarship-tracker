@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from 'cn'
-import { ExternalLink } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -10,31 +10,41 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
 import { StatusSelect } from '@/components/applications/status-select'
 import { DeadlineCell } from '@/components/applications/deadline-cell'
 import { DeleteDialog } from '@/components/applications/delete-dialog'
+import { DossierProgress } from '@/components/applications/dossier-progress'
 import { daysLeft } from '@/lib/deadline'
-import type { Application, ApplicationStatus } from '@/lib/types'
+import type { ApplicationStatus, ApplicationWithChecklist } from '@/lib/types'
+
+/** Stops row-level click handlers from firing when using inline controls. */
+function stop(e: React.MouseEvent) {
+  e.stopPropagation()
+}
 
 export function ApplicationTable({
   applications,
   onStatusChange,
   onDeadlineChange,
   onDelete,
+  onOpenApplication,
 }: {
-  applications: Application[]
+  applications: ApplicationWithChecklist[]
   onStatusChange: (id: string, status: ApplicationStatus) => void
   onDeadlineChange: (id: string, deadline: string | null) => void
   onDelete: (id: string) => void
+  onOpenApplication: (id: string) => void
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
-            <TableHead className="w-[30%]">Bourse</TableHead>
+            <TableHead className="w-[26%]">Bourse</TableHead>
             <TableHead>Montant</TableHead>
             <TableHead>Deadline</TableHead>
+            <TableHead>Dossier</TableHead>
             <TableHead>Statut</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -47,23 +57,25 @@ export function ApplicationTable({
             return (
               <TableRow
                 key={a.id}
+                onClick={() => onOpenApplication(a.id)}
                 className={cn(
-                  'border-l-2 border-l-transparent',
+                  'cursor-pointer border-l-2 border-l-transparent',
                   expired && 'opacity-60',
                   urgent && 'border-l-red-500',
                 )}
               >
                 <TableCell className="whitespace-normal">
                   <div className="flex flex-col gap-0.5">
-                    <a
-                      href={a.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex w-fit items-center gap-1.5 font-medium hover:text-primary hover:underline"
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        stop(e)
+                        onOpenApplication(a.id)
+                      }}
+                      className="w-fit text-left font-medium hover:text-primary hover:underline"
                     >
                       {a.name}
-                      <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
-                    </a>
+                    </button>
                     {a.country && (
                       <span className="text-xs text-muted-foreground">
                         {a.country}
@@ -74,20 +86,39 @@ export function ApplicationTable({
                 <TableCell className="whitespace-normal text-muted-foreground">
                   {a.amount ?? '—'}
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={stop}>
                   <DeadlineCell
                     deadline={a.deadline}
                     onChange={(d) => onDeadlineChange(a.id, d)}
                   />
                 </TableCell>
                 <TableCell>
+                  <DossierProgress
+                    items={a.checklist_items}
+                    className="w-28"
+                  />
+                </TableCell>
+                <TableCell onClick={stop}>
                   <StatusSelect
                     value={a.status}
                     onChange={(s) => onStatusChange(a.id, s)}
                   />
                 </TableCell>
-                <TableCell className="text-right">
-                  <DeleteDialog name={a.name} onConfirm={() => onDelete(a.id)} />
+                <TableCell className="text-right" onClick={stop}>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onOpenApplication(a.id)}
+                    >
+                      Ouvrir
+                      <ChevronRight data-icon="inline-end" />
+                    </Button>
+                    <DeleteDialog
+                      name={a.name}
+                      onConfirm={() => onDelete(a.id)}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             )

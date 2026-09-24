@@ -16,24 +16,31 @@ import {
 export function DeleteDialog({
   name,
   onConfirm,
+  trigger,
 }: {
   name: string
   onConfirm: () => void
+  /** Optional custom trigger. Falls back to an icon-only button. */
+  trigger?: React.ReactElement
 }) {
   return (
     <Dialog>
-      <DialogTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-destructive"
-            aria-label={`Supprimer ${name}`}
-          />
-        }
-      >
-        <Trash2 />
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger render={trigger} />
+      ) : (
+        <DialogTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive"
+              aria-label={`Supprimer ${name}`}
+            />
+          }
+        >
+          <Trash2 />
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Supprimer cette candidature ?</DialogTitle>

@@ -21,7 +21,7 @@ export function ResultCards({
   return (
     <div className="flex flex-col gap-3">
       {results.map((s) => (
-        <Card key={s.link}>
+        <Card key={s.link ?? s.name}>
           <CardContent className="flex flex-col gap-3">
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-pretty font-medium leading-snug">{s.name}</h3>
@@ -43,18 +43,20 @@ export function ResultCards({
                 <dd className="text-right">{s.country ?? '—'}</dd>
               </div>
             </dl>
-            <a
-              href={s.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex w-fit items-center gap-1.5 text-sm text-primary hover:underline"
-            >
-              Voir la source
-              <ExternalLink className="size-3.5" />
-            </a>
+            {s.link && (
+              <a
+                href={s.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center gap-1.5 text-sm text-primary hover:underline"
+              >
+                Voir la source
+                <ExternalLink className="size-3.5" />
+              </a>
+            )}
             <SaveButton
-              saved={savedLinks.includes(s.link)}
-              saving={savingLink === s.link}
+              saved={savedLinks.includes(s.link ?? s.name)}
+              saving={savingLink === (s.link ?? s.name)}
               onClick={() => onSave(s)}
               className="h-10 w-full"
             />

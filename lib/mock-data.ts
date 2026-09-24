@@ -1,4 +1,9 @@
-import type { Application, Scholarship } from '@/lib/types'
+import type {
+  ApplicationWithChecklist,
+  ChecklistItem,
+  Scholarship,
+  UserSettings,
+} from '@/lib/types'
 
 /** Returns a "YYYY-MM-DD" date offset from today by `days` (UTC-based). */
 export function isoOffset(days: number): string {
@@ -10,6 +15,23 @@ export function isoOffset(days: number): string {
   )
   return new Date(t).toISOString().slice(0, 10)
 }
+
+/** Builds a checklist from labels, marking the first `doneCount` as done. */
+function checklist(labels: string[], doneCount: number): ChecklistItem[] {
+  return labels.map((label, i) => ({
+    id: `${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${i}`,
+    label,
+    is_done: i < doneCount,
+    sort_order: i,
+  }))
+}
+
+const commonDocs = [
+  'CV à jour',
+  'Lettre de motivation',
+  'Relevés de notes',
+  'Preuve de niveau de langue',
+]
 
 /** Mock web-search results used until a real backend is connected. */
 export const mockSearchResults: Scholarship[] = [
@@ -57,8 +79,8 @@ export const mockSearchResults: Scholarship[] = [
   },
 ]
 
-/** Mock saved applications with a spread of statuses and deadlines. */
-export function getMockApplications(): Application[] {
+/** Mock saved applications with a spread of statuses, deadlines and dossiers. */
+export function getMockApplications(): ApplicationWithChecklist[] {
   return [
     {
       id: 'app-chevening',
@@ -68,8 +90,10 @@ export function getMockApplications(): Application[] {
       country: 'Royaume-Uni',
       link: 'https://www.chevening.org',
       status: 'in_progress',
-      notes: 'Rédiger les 4 essais avant la deadline.',
+      notes: 'Rédiger les 4 essais avant la deadline. Relancer le référent.',
       created_at: isoOffset(-10),
+      // 2 / 4
+      checklist_items: checklist(commonDocs, 2),
     },
     {
       id: 'app-daad',
@@ -81,6 +105,8 @@ export function getMockApplications(): Application[] {
       status: 'todo',
       notes: null,
       created_at: isoOffset(-8),
+      // 0 / 4
+      checklist_items: checklist(commonDocs, 0),
     },
     {
       id: 'app-commonwealth',
@@ -92,6 +118,8 @@ export function getMockApplications(): Application[] {
       status: 'submitted',
       notes: 'Dossier envoyé, en attente de réponse.',
       created_at: isoOffset(-3),
+      // 4 / 4 (complet)
+      checklist_items: checklist(commonDocs, 4),
     },
     {
       id: 'app-vanier',
@@ -103,6 +131,11 @@ export function getMockApplications(): Application[] {
       status: 'todo',
       notes: null,
       created_at: isoOffset(-6),
+      // custom item ajouté
+      checklist_items: checklist(
+        [...commonDocs, 'Lettre de recommandation'],
+        1,
+      ),
     },
     {
       id: 'app-eiffel',
@@ -112,19 +145,27 @@ export function getMockApplications(): Application[] {
       country: 'France',
       link: 'https://www.campusfrance.org',
       status: 'accepted',
-      notes: 'Entretien passé avec succès.',
+      notes: 'Entretien passé avec succès. Prévoir le logement à Paris.',
       created_at: isoOffset(-30),
+      // 3 / 4
+      checklist_items: checklist(commonDocs, 3),
     },
     {
       id: 'app-erasmus',
       name: 'Erasmus Mundus Finance',
       amount: null,
       deadline: null,
+      // Bourse ajoutée à la main, sans lien source
+      link: null,
       country: 'Europe',
-      link: 'https://www.eacea.ec.europa.eu',
       status: 'in_progress',
       notes: 'Choisir 3 universités du consortium.',
       created_at: isoOffset(-5),
+      // 1 / 3
+      checklist_items: checklist(
+        ['CV à jour', 'Lettre de motivation', 'Choix des universités'],
+        1,
+      ),
     },
     {
       id: 'app-mastercard',
@@ -136,6 +177,20 @@ export function getMockApplications(): Application[] {
       status: 'rejected',
       notes: null,
       created_at: isoOffset(-40),
+      // aucun document
+      checklist_items: [],
     },
   ]
+}
+
+export function getMockSettings(): UserSettings {
+  return {
+    email_reminders: true,
+    reminder_days: [7, 3, 1],
+  }
+}
+
+export const mockUser = {
+  name: 'Marie Laurent',
+  email: 'marie.laurent@email.com',
 }
