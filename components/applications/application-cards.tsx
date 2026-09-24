@@ -1,25 +1,32 @@
 'use client'
 
 import { cn } from 'cn'
-import { ExternalLink } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { StatusSelect } from '@/components/applications/status-select'
 import { DeadlineCell } from '@/components/applications/deadline-cell'
 import { DeleteDialog } from '@/components/applications/delete-dialog'
 import { DeadlineBadge } from '@/components/deadline-badge'
+import { DossierProgress } from '@/components/applications/dossier-progress'
 import { daysLeft } from '@/lib/deadline'
-import type { Application, ApplicationStatus } from '@/lib/types'
+import type { ApplicationStatus, ApplicationWithChecklist } from '@/lib/types'
+
+/** Stops the card-level click from firing when using inline controls. */
+function stop(e: React.MouseEvent) {
+  e.stopPropagation()
+}
 
 export function ApplicationCards({
   applications,
   onStatusChange,
   onDeadlineChange,
   onDelete,
+  onOpenApplication,
 }: {
-  applications: Application[]
+  applications: ApplicationWithChecklist[]
   onStatusChange: (id: string, status: ApplicationStatus) => void
   onDeadlineChange: (id: string, deadline: string | null) => void
   onDelete: (id: string) => void
+  onOpenApplication: (id: string) => void
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -30,8 +37,17 @@ export function ApplicationCards({
         return (
           <Card
             key={a.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpenApplication(a.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onOpenApplication(a.id)
+              }
+            }}
             className={cn(
-              'border-l-2 border-l-transparent',
+              'cursor-pointer border-l-2 border-l-transparent transition-colors hover:border-border hover:bg-muted/30',
               expired && 'opacity-60',
               urgent && 'border-l-red-500',
             )}
@@ -39,15 +55,7 @@ export function ApplicationCards({
             <CardContent className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-0.5">
-                  <a
-                    href={a.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex w-fit items-center gap-1.5 font-medium leading-snug hover:text-primary hover:underline"
-                  >
-                    {a.name}
-                    <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
-                  </a>
+                  <span className="font-medium leading-snug">{a.name}</span>
                   {a.country && (
                     <span className="text-xs text-muted-foreground">
                       {a.country}
@@ -61,7 +69,9 @@ export function ApplicationCards({
                 <p className="text-sm text-muted-foreground">{a.amount}</p>
               )}
 
-              <div className="flex flex-col gap-2">
+              <DossierProgress items={a.checklist_items} />
+
+              <div className="flex flex-col gap-2" onClick={stop}>
                 <span className="text-xs font-medium text-muted-foreground">
                   Date limite
                 </span>
@@ -71,7 +81,10 @@ export function ApplicationCards({
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-2">
+              <div
+                className="flex items-center justify-between gap-2"
+                onClick={stop}
+              >
                 <StatusSelect
                   value={a.status}
                   onChange={(s) => onStatusChange(a.id, s)}

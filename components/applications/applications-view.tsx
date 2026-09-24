@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Bookmark, Search } from 'lucide-react'
+import { Bookmark, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Empty,
@@ -17,7 +17,10 @@ import { StatCards } from '@/components/applications/stat-cards'
 import { ApplicationTable } from '@/components/applications/application-table'
 import { ApplicationCards } from '@/components/applications/application-cards'
 import { daysLeft } from '@/lib/deadline'
-import type { Application, ApplicationStatus } from '@/lib/types'
+import type {
+  ApplicationStatus,
+  ApplicationWithChecklist,
+} from '@/lib/types'
 
 type FilterKey = 'all' | 'todo' | 'in_progress' | 'submitted' | 'done'
 
@@ -29,7 +32,7 @@ const filters: { key: FilterKey; label: string }[] = [
   { key: 'done', label: 'Terminées' },
 ]
 
-function matchesFilter(app: Application, filter: FilterKey): boolean {
+function matchesFilter(app: ApplicationWithChecklist, filter: FilterKey): boolean {
   switch (filter) {
     case 'all':
       return true
@@ -41,7 +44,10 @@ function matchesFilter(app: Application, filter: FilterKey): boolean {
 }
 
 /** Soonest deadline first; expired and undated applications sink to the bottom. */
-function sortByDeadline(a: Application, b: Application): number {
+function sortByDeadline(
+  a: ApplicationWithChecklist,
+  b: ApplicationWithChecklist,
+): number {
   const da = daysLeft(a.deadline)
   const db = daysLeft(b.deadline)
 
@@ -59,11 +65,15 @@ export function ApplicationsView({
   onStatusChange,
   onDeadlineChange,
   onDelete,
+  onOpenApplication,
+  onAddClick,
 }: {
-  applications: Application[]
+  applications: ApplicationWithChecklist[]
   onStatusChange: (id: string, status: ApplicationStatus) => void
   onDeadlineChange: (id: string, deadline: string | null) => void
   onDelete: (id: string) => void
+  onOpenApplication: (id: string) => void
+  onAddClick: () => void
 }) {
   const [filter, setFilter] = useState<FilterKey>('all')
 
@@ -78,7 +88,7 @@ export function ApplicationsView({
   if (applications.length === 0) {
     return (
       <div className="flex flex-col gap-6">
-        <Header />
+        <Header onAddClick={onAddClick} />
         <Empty className="rounded-xl border border-dashed border-border py-16">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -86,14 +96,21 @@ export function ApplicationsView({
             </EmptyMedia>
             <EmptyTitle>Aucune candidature pour l’instant</EmptyTitle>
             <EmptyDescription>
-              Recherche des bourses et sauvegarde-les pour les suivre ici.
+              Recherche des bourses et sauvegarde-les, ou ajoute-en une
+              manuellement pour la suivre ici.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Button render={<Link href="/search" />}>
-              <Search data-icon="inline-start" />
-              Rechercher des bourses
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button render={<Link href="/search" />}>
+                <Search data-icon="inline-start" />
+                Rechercher des bourses
+              </Button>
+              <Button variant="outline" onClick={onAddClick}>
+                <Plus data-icon="inline-start" />
+                Ajouter manuellement
+              </Button>
+            </div>
           </EmptyContent>
         </Empty>
       </div>
@@ -102,7 +119,7 @@ export function ApplicationsView({
 
   return (
     <div className="flex flex-col gap-6">
-      <Header />
+      <Header onAddClick={onAddClick} />
 
       <StatCards applications={applications} />
 
@@ -132,6 +149,7 @@ export function ApplicationsView({
               onStatusChange={onStatusChange}
               onDeadlineChange={onDeadlineChange}
               onDelete={onDelete}
+              onOpenApplication={onOpenApplication}
             />
           </div>
           <div className="md:hidden">
@@ -140,6 +158,7 @@ export function ApplicationsView({
               onStatusChange={onStatusChange}
               onDeadlineChange={onDeadlineChange}
               onDelete={onDelete}
+              onOpenApplication={onOpenApplication}
             />
           </div>
         </>
@@ -148,15 +167,21 @@ export function ApplicationsView({
   )
 }
 
-function Header() {
+function Header({ onAddClick }: { onAddClick: () => void }) {
   return (
-    <header className="flex flex-col gap-2">
-      <h1 className="text-2xl font-semibold tracking-tight text-balance">
-        Mes candidatures
-      </h1>
-      <p className="text-muted-foreground text-pretty">
-        Suis l’avancement de chaque dossier et garde un œil sur les deadlines.
-      </p>
+    <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight text-balance">
+          Mes candidatures
+        </h1>
+        <p className="text-muted-foreground text-pretty">
+          Suis l’avancement de chaque dossier et garde un œil sur les deadlines.
+        </p>
+      </div>
+      <Button onClick={onAddClick} className="shrink-0">
+        <Plus data-icon="inline-start" />
+        Ajouter une bourse
+      </Button>
     </header>
   )
 }

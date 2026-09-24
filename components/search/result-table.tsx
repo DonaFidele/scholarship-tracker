@@ -39,17 +39,21 @@ export function ResultTable({
         </TableHeader>
         <TableBody>
           {results.map((s) => (
-            <TableRow key={s.link}>
+            <TableRow key={s.link ?? s.name}>
               <TableCell className="whitespace-normal">
-                <a
-                  href={s.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 font-medium hover:text-primary hover:underline"
-                >
-                  {s.name}
-                  <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
-                </a>
+                {s.link ? (
+                  <a
+                    href={s.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 font-medium hover:text-primary hover:underline"
+                  >
+                    {s.name}
+                    <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+                  </a>
+                ) : (
+                  <span className="font-medium">{s.name}</span>
+                )}
               </TableCell>
               <TableCell className="whitespace-normal text-muted-foreground">
                 {s.amount ?? '—'}
@@ -71,8 +75,8 @@ export function ResultTable({
               </TableCell>
               <TableCell className="text-right">
                 <SaveButton
-                  saved={savedLinks.includes(s.link)}
-                  saving={savingLink === s.link}
+                  saved={savedLinks.includes(s.link ?? s.name)}
+                  saving={savingLink === (s.link ?? s.name)}
                   onClick={() => onSave(s)}
                 />
               </TableCell>
