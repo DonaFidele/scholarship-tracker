@@ -142,14 +142,16 @@ export function Navbar({
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium text-foreground">
-                    Marie Laurent
-                  </span>
-                  <span className="text-xs font-normal text-muted-foreground">
-                    marie.laurent@email.com
-                  </span>
-                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium text-foreground">
+                      Marie Laurent
+                    </span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      marie.laurent@email.com
+                    </span>
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem

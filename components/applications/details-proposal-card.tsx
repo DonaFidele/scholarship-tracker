@@ -103,7 +103,7 @@ export function DetailsProposalCard({
       proposal.level ? levelLabels[proposal.level] : '',
       application.level,
       application.level ? levelLabels[application.level] : null,
-      application.level === null,
+      application.level == null,
     )
     push(
       'coverage',
@@ -113,7 +113,7 @@ export function DetailsProposalCard({
       proposal.coverage ? coverageLabels[proposal.coverage] : '',
       application.coverage,
       application.coverage ? coverageLabels[application.coverage] : null,
-      application.coverage === null,
+      application.coverage == null,
     )
     push(
       'benin_eligible',
@@ -122,8 +122,9 @@ export function DetailsProposalCard({
       proposal.benin_eligible,
       beninLabels[proposal.benin_eligible],
       application.benin_eligible,
-      beninLabels[application.benin_eligible],
-      application.benin_eligible === 'unknown',
+      beninLabels[application.benin_eligible ?? 'unknown'],
+      application.benin_eligible === 'unknown' ||
+        application.benin_eligible === undefined,
     )
     push(
       'asks_fee',
@@ -146,7 +147,7 @@ export function DetailsProposalCard({
       proposal.opens_at,
       formatDateFr(proposal.opens_at),
       application.opens_at,
-      formatDateFr(application.opens_at) || null,
+      formatDateFr(application.opens_at ?? null) || null,
       !application.opens_at,
     )
     push(
@@ -166,7 +167,7 @@ export function DetailsProposalCard({
       proposal.results_at,
       formatDateFr(proposal.results_at),
       application.results_at,
-      formatDateFr(application.results_at) || null,
+      formatDateFr(application.results_at ?? null) || null,
       !application.results_at,
     )
     push(
@@ -176,7 +177,7 @@ export function DetailsProposalCard({
       proposal.apply_link,
       proposal.apply_link ?? '',
       application.apply_link,
-      application.apply_link,
+      application.apply_link ?? null,
       !application.apply_link,
     )
     push(
@@ -186,7 +187,7 @@ export function DetailsProposalCard({
       proposal.covered_costs,
       proposal.covered_costs ?? '',
       application.covered_costs,
-      application.covered_costs,
+      application.covered_costs ?? null,
       !application.covered_costs,
     )
     push(
@@ -196,7 +197,7 @@ export function DetailsProposalCard({
       proposal.eligibility_summary,
       proposal.eligibility_summary ?? '',
       application.eligibility_notes,
-      application.eligibility_notes,
+      application.eligibility_notes ?? null,
       !application.eligibility_notes,
     )
     return list
