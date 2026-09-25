@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AlertCircle, SearchX, Sparkles } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SearchBar } from '@/components/search/search-bar'
 import { ResultTable } from '@/components/search/result-table'
 import { ResultCards } from '@/components/search/result-cards'
+import {
+  ResultFilters,
+  type CoverageFilter,
+  type LevelFilter,
+} from '@/components/search/result-filters'
+import { ScamNotice } from '@/components/scholarship/scam-notice'
 import type { Scholarship, SearchStatus } from '@/lib/types'
 
 const chips = [
@@ -59,11 +65,32 @@ export function SearchView({
   onSave: (scholarship: Scholarship) => void
 }) {
   const [query, setQuery] = useState('')
+  const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
+  const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>('all')
+  const [hideClosedBenin, setHideClosedBenin] = useState(false)
 
   const runChip = (chip: string) => {
     setQuery(chip)
     onSearch(chip)
   }
+
+  const resetFilters = () => {
+    setLevelFilter('all')
+    setCoverageFilter('all')
+    setHideClosedBenin(false)
+  }
+
+  const filteredResults = useMemo(
+    () =>
+      results.filter((s) => {
+        if (levelFilter !== 'all' && s.level !== levelFilter) return false
+        if (coverageFilter !== 'all' && s.coverage !== coverageFilter)
+          return false
+        if (hideClosedBenin && s.benin_eligible === 'no') return false
+        return true
+      }),
+    [results, levelFilter, coverageFilter, hideClosedBenin],
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -100,6 +127,8 @@ export function SearchView({
         </div>
       </div>
 
+      {status !== 'loading' && <ScamNotice />}
+
       {status === 'loading' && <ResultsSkeleton />}
 
       {status === 'error' && (
@@ -127,27 +156,54 @@ export function SearchView({
       )}
 
       {status === 'success' && results.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <div className="hidden md:block">
-            <ResultTable
-              results={results}
-              savedLinks={savedLinks}
-              savingLink={savingLink}
-              onSave={onSave}
-            />
-          </div>
-          <div className="md:hidden">
-            <ResultCards
-              results={results}
-              savedLinks={savedLinks}
-              savingLink={savingLink}
-              onSave={onSave}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Résultats générés automatiquement. Vérifie toujours les montants et
-            les dates limites sur le site officiel de chaque bourse.
-          </p>
+        <div className="flex flex-col gap-4">
+          <ResultFilters
+            level={levelFilter}
+            coverage={coverageFilter}
+            hideClosedBenin={hideClosedBenin}
+            onLevelChange={setLevelFilter}
+            onCoverageChange={setCoverageFilter}
+            onHideClosedBeninChange={setHideClosedBenin}
+          />
+
+          {filteredResults.length === 0 ? (
+            <Empty className="rounded-xl border border-dashed border-border">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <SearchX />
+                </EmptyMedia>
+                <EmptyTitle>Aucun résultat avec ces filtres</EmptyTitle>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button variant="outline" onClick={resetFilters}>
+                  Réinitialiser les filtres
+                </Button>
+              </EmptyContent>
+            </Empty>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div className="hidden md:block">
+                <ResultTable
+                  results={filteredResults}
+                  savedLinks={savedLinks}
+                  savingLink={savingLink}
+                  onSave={onSave}
+                />
+              </div>
+              <div className="md:hidden">
+                <ResultCards
+                  results={filteredResults}
+                  savedLinks={savedLinks}
+                  savingLink={savingLink}
+                  onSave={onSave}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Résultats générés automatiquement. Vérifie toujours les montants
+                et les dates limites sur le site officiel de chaque bourse.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

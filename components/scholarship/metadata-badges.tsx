@@ -69,7 +69,7 @@ export function CoverageBadge({ value }: { value: Coverage | null }) {
 }
 
 export function BeninBadge({ value }: { value: BeninEligibility }) {
-  const cfg = beninConfig[value]
+  const cfg = beninConfig[value] ?? beninConfig.unknown
   return (
     <Tooltip>
       <TooltipTrigger
