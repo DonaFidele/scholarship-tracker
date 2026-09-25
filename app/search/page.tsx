@@ -40,13 +40,15 @@ export default function SearchPage() {
   }
 
   const handleSave = (scholarship: Scholarship) => {
-    if (savedLinks.includes(scholarship.link)) {
+    const link = scholarship.link
+    if (!link) return
+    if (savedLinks.includes(link)) {
       toast.info('Cette bourse est déjà dans tes candidatures.')
       return
     }
-    setSavingLink(scholarship.link)
+    setSavingLink(link)
     setTimeout(() => {
-      setSavedLinks((prev) => [...prev, scholarship.link])
+      setSavedLinks((prev) => [...prev, link])
       setSavingLink(null)
       toast.success('Bourse sauvegardée dans tes candidatures.')
     }, 900)

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { GraduationCap, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase/client'
 import {
   Card,
   CardContent,
@@ -26,7 +26,6 @@ import { GoogleIcon } from '@/components/google-icon'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -34,9 +33,29 @@ export default function LoginPage() {
 
   const busy = googleLoading || linkLoading
 
-  const handleGoogle = () => {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('error') === 'auth') {
+      const message = 'La connexion a échoué. Réessaie.'
+      setError(message)
+      toast.error(message)
+    }
+  }, [])
+
+  const handleGoogle = async () => {
     setGoogleLoading(true)
-    setTimeout(() => router.push('/search'), 1000)
+    setError(null)
+    const supabase = createClient()
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    })
+    if (oauthError) {
+      setGoogleLoading(false)
+      const message = 'Impossible de se connecter avec Google. Réessaie.'
+      setError(message)
+      toast.error(message)
+    }
   }
 
   const handleMagicLink = (e: React.FormEvent) => {

@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 type ActivePage = 'search' | 'applications'
 
@@ -153,9 +154,15 @@ export function Navbar({
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     variant="destructive"
-                    onClick={() => {
-                      toast.success('Déconnexion réussie.')
+                    onClick={async () => {
+                      const supabase = createClient()
+                      const { error } = await supabase.auth.signOut()
+                      if (error) {
+                        toast.error('Impossible de se déconnecter. Réessaie.')
+                        return
+                      }
                       router.push('/login')
+                      router.refresh()
                     }}
                   >
                     <LogOut />
