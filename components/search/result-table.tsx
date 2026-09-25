@@ -11,6 +11,12 @@ import {
 } from '@/components/ui/table'
 import { DeadlineBadge } from '@/components/deadline-badge'
 import { SaveButton } from '@/components/search/save-button'
+import {
+  BeninBadge,
+  CoverageBadge,
+  FeeWarningBadge,
+  LevelBadge,
+} from '@/components/scholarship/metadata-badges'
 import { formatDateFr } from '@/lib/format'
 import type { Scholarship } from '@/lib/types'
 
@@ -30,10 +36,11 @@ export function ResultTable({
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
-            <TableHead className="w-[38%]">Bourse</TableHead>
+            <TableHead className="w-[36%]">Bourse</TableHead>
             <TableHead>Montant</TableHead>
             <TableHead>Deadline</TableHead>
             <TableHead>Pays</TableHead>
+            <TableHead>Bénin</TableHead>
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
         </TableHeader>
@@ -41,19 +48,28 @@ export function ResultTable({
           {results.map((s) => (
             <TableRow key={s.link ?? s.name}>
               <TableCell className="whitespace-normal">
-                {s.link ? (
-                  <a
-                    href={s.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 font-medium hover:text-primary hover:underline"
-                  >
-                    {s.name}
-                    <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
-                  </a>
-                ) : (
-                  <span className="font-medium">{s.name}</span>
-                )}
+                <div className="flex flex-col gap-1.5">
+                  {s.link ? (
+                    <a
+                      href={s.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex w-fit items-center gap-1.5 font-medium hover:text-primary hover:underline"
+                    >
+                      {s.name}
+                      <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+                    </a>
+                  ) : (
+                    <span className="font-medium">{s.name}</span>
+                  )}
+                  {(s.level || s.coverage || s.asks_fee === true) && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <LevelBadge value={s.level} />
+                      <CoverageBadge value={s.coverage} />
+                      <FeeWarningBadge show={s.asks_fee} />
+                    </div>
+                  )}
+                </div>
               </TableCell>
               <TableCell className="whitespace-normal text-muted-foreground">
                 {s.amount ?? '—'}
@@ -72,6 +88,9 @@ export function ResultTable({
               </TableCell>
               <TableCell className="text-muted-foreground">
                 {s.country ?? '—'}
+              </TableCell>
+              <TableCell>
+                <BeninBadge value={s.benin_eligible} />
               </TableCell>
               <TableCell className="text-right">
                 <SaveButton

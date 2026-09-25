@@ -4,6 +4,12 @@ import { ExternalLink } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { DeadlineBadge } from '@/components/deadline-badge'
 import { SaveButton } from '@/components/search/save-button'
+import {
+  BeninBadge,
+  CoverageBadge,
+  FeeWarningBadge,
+  LevelBadge,
+} from '@/components/scholarship/metadata-badges'
 import { formatDateFr } from '@/lib/format'
 import type { Scholarship } from '@/lib/types'
 
@@ -27,6 +33,13 @@ export function ResultCards({
               <h3 className="text-pretty font-medium leading-snug">{s.name}</h3>
               <DeadlineBadge deadline={s.deadline} className="mt-0.5 shrink-0" />
             </div>
+            {(s.level || s.coverage || s.asks_fee === true) && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <LevelBadge value={s.level} />
+                <CoverageBadge value={s.coverage} />
+                <FeeWarningBadge show={s.asks_fee} />
+              </div>
+            )}
             <dl className="flex flex-col gap-1 text-sm">
               <div className="flex justify-between gap-3">
                 <dt className="text-muted-foreground">Montant</dt>
@@ -38,9 +51,12 @@ export function ResultCards({
                   {s.deadline ? formatDateFr(s.deadline) : 'Non précisée'}
                 </dd>
               </div>
-              <div className="flex justify-between gap-3">
+              <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">Pays</dt>
-                <dd className="text-right">{s.country ?? '—'}</dd>
+                <dd className="flex items-center gap-2 text-right">
+                  <span>{s.country ?? '—'}</span>
+                  <BeninBadge value={s.benin_eligible} />
+                </dd>
               </div>
             </dl>
             {s.link && (

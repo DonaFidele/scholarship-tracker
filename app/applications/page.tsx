@@ -6,15 +6,43 @@ import { Navbar } from '@/components/navbar'
 import { ApplicationsView } from '@/components/applications/applications-view'
 import { ApplicationDetailSheet } from '@/components/applications/application-detail-sheet'
 import { AddApplicationDialog } from '@/components/applications/add-application-dialog'
-import { getMockApplications } from '@/lib/mock-data'
+import {
+  getMockApplications,
+  getMockDetailsProposal,
+  isoOffset,
+} from '@/lib/mock-data'
 import type {
+  Application,
+  ApplicationInfo,
   ApplicationStatus,
   ApplicationWithChecklist,
   Scholarship,
+  ScholarshipDetails,
 } from '@/lib/types'
 
 let idCounter = 0
 const uid = (prefix: string) => `${prefix}-${Date.now()}-${idCounter++}`
+
+type InfoPatch = Partial<
+  Pick<
+    Application,
+    | 'level'
+    | 'coverage'
+    | 'benin_eligible'
+    | 'asks_fee'
+    | 'opens_at'
+    | 'deadline'
+    | 'results_at'
+    | 'apply_link'
+    | 'covered_costs'
+    | 'eligibility_notes'
+  >
+>
+
+// The apply-details patch carries only the fields the user checked.
+type DetailsPatch = InfoPatch
+
+type DetailsState = 'idle' | 'loading' | 'error' | 'ready'
 
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<ApplicationWithChecklist[]>(
@@ -29,6 +57,14 @@ export default function ApplicationsPage() {
     'idle' | 'saving' | 'saved'
   >('idle')
   const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Details extraction flow (mocked).
+  const [detailsState, setDetailsState] = useState<DetailsState>('idle')
+  const [detailsError, setDetailsError] = useState<string | null>(null)
+  const [detailsProposal, setDetailsProposal] =
+    useState<ScholarshipDetails | null>(null)
+  const [applyingDetails, setApplyingDetails] = useState(false)
+  const detailsTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const selected = useMemo(
     () => applications.find((a) => a.id === openId) ?? null,
@@ -112,6 +148,75 @@ export default function ApplicationsPage() {
     }, 600)
   }
 
+  const handleToggleFavorite = (id: string, value: boolean) => {
+    patch(id, (a) => ({ ...a, is_favorite: value }))
+    toast.success(value ? 'Ajouté aux favoris' : 'Retiré des favoris')
+  }
+
+  const handleInfoChange = (id: string, info: InfoPatch) => {
+    patch(id, (a) => ({ ...a, ...info }))
+    toast.success('Informations enregistrées')
+  }
+
+  const resetDetails = () => {
+    if (detailsTimer.current) clearTimeout(detailsTimer.current)
+    setDetailsState('idle')
+    setDetailsError(null)
+    setDetailsProposal(null)
+    setApplyingDetails(false)
+  }
+
+  const handleFetchDetails = (id: string) => {
+    const app = applications.find((a) => a.id === id)
+    if (!app) return
+    setDetailsState('loading')
+    setDetailsError(null)
+    setDetailsProposal(null)
+    if (detailsTimer.current) clearTimeout(detailsTimer.current)
+    detailsTimer.current = setTimeout(() => {
+      if (!app.link && !app.apply_link) {
+        setDetailsState('error')
+        setDetailsError(
+          'Aucun lien disponible pour analyser cette bourse. Ajoute un lien officiel puis réessaie.',
+        )
+        return
+      }
+      setDetailsProposal(getMockDetailsProposal())
+      setDetailsState('ready')
+    }, 1200)
+  }
+
+  const handleApplyDetails = (
+    id: string,
+    detailsPatch: DetailsPatch,
+    documentsToAdd: string[],
+  ) => {
+    setApplyingDetails(true)
+    setTimeout(() => {
+      patch(id, (a) => {
+        const maxOrder = a.checklist_items.reduce(
+          (m, it) => Math.max(m, it.sort_order),
+          -1,
+        )
+        const newItems = documentsToAdd.map((label, i) => ({
+          id: uid('item'),
+          label,
+          is_done: false,
+          sort_order: maxOrder + 1 + i,
+        }))
+        return {
+          ...a,
+          ...detailsPatch,
+          details_checked_at: new Date().toISOString(),
+          checklist_items: [...a.checklist_items, ...newItems],
+        }
+      })
+      setApplyingDetails(false)
+      resetDetails()
+      toast.success('Détails appliqués')
+    }, 700)
+  }
+
   const handleAdd = (data: Scholarship & { status: ApplicationStatus }) => {
     setAdding(true)
     setAddError(null)
@@ -124,6 +229,17 @@ export default function ApplicationsPage() {
         amount: data.amount,
         country: data.country,
         deadline: data.deadline,
+        level: data.level,
+        coverage: data.coverage,
+        benin_eligible: data.benin_eligible,
+        asks_fee: data.asks_fee,
+        apply_link: null,
+        opens_at: null,
+        results_at: null,
+        is_favorite: false,
+        eligibility_notes: null,
+        covered_costs: null,
+        details_checked_at: null,
         status: data.status,
         notes: '',
         created_at: new Date().toISOString(),
@@ -145,6 +261,7 @@ export default function ApplicationsPage() {
           onStatusChange={handleStatusChange}
           onDeadlineChange={handleDeadlineChange}
           onDelete={handleDelete}
+          onToggleFavorite={handleToggleFavorite}
           onOpenApplication={setOpenId}
           onAddClick={() => setAddOpen(true)}
         />
@@ -157,6 +274,7 @@ export default function ApplicationsPage() {
           if (!open) {
             setOpenId(null)
             setNotesSaveState('idle')
+            resetDetails()
           }
         }}
         onToggleItem={(itemId, done) =>
@@ -173,6 +291,18 @@ export default function ApplicationsPage() {
         onStatusChange={handleStatusChange}
         onDeadlineChange={handleDeadlineChange}
         onDelete={handleDelete}
+        onToggleFavorite={handleToggleFavorite}
+        onInfoChange={handleInfoChange}
+        detailsState={detailsState}
+        detailsError={detailsError}
+        detailsProposal={detailsProposal}
+        applyingDetails={applyingDetails}
+        onFetchDetails={() => selected && handleFetchDetails(selected.id)}
+        onApplyDetails={(details, createChecklist) =>
+          selected &&
+          handleApplyDetails(selected.id, details, createChecklist)
+        }
+        onDismissDetails={resetDetails}
       />
 
       <AddApplicationDialog
