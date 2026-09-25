@@ -30,6 +30,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [linkLoading, setLinkLoading] = useState(false)
+  const [linkSent, setLinkSent] = useState(false)
 
   const busy = googleLoading || linkLoading
 
@@ -58,18 +59,29 @@ export default function LoginPage() {
     }
   }
 
-  const handleMagicLink = (e: React.FormEvent) => {
+  const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!EMAIL_RE.test(email.trim())) {
+    const trimmed = email.trim()
+    if (!EMAIL_RE.test(trimmed)) {
       setError('Saisis une adresse e-mail valide.')
       return
     }
     setError(null)
     setLinkLoading(true)
-    setTimeout(() => {
-      setLinkLoading(false)
-      toast.success('Lien de connexion envoyé. Vérifie ta boîte mail.')
-    }, 1000)
+    const supabase = createClient()
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: trimmed,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    })
+    setLinkLoading(false)
+    if (otpError) {
+      const message = "Impossible d'envoyer le lien. Réessaie dans quelques instants."
+      setError(message)
+      toast.error(message)
+      return
+    }
+    setLinkSent(true)
+    toast.success('Lien de connexion envoyé. Vérifie ta boîte mail (et tes spams).')
   }
 
   return (
@@ -117,45 +129,62 @@ export default function LoginPage() {
               <Separator className="flex-1" />
             </div>
 
-            <form onSubmit={handleMagicLink}>
-              <FieldGroup>
-                <Field data-invalid={error ? true : undefined}>
-                  <FieldLabel htmlFor="email">Adresse e-mail</FieldLabel>
-                  <Input
-                    id="email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    placeholder="marie.laurent@email.com"
-                    className="h-11"
-                    value={email}
-                    aria-invalid={error ? true : undefined}
-                    onChange={(e) => {
-                      setEmail(e.target.value)
-                      if (error) setError(null)
-                    }}
-                    disabled={busy}
-                  />
-                  {error ? (
-                    <FieldDescription className="text-destructive">
-                      {error}
-                    </FieldDescription>
-                  ) : (
-                    <FieldDescription>
-                      On t’enverra un lien de connexion sécurisé.
-                    </FieldDescription>
-                  )}
-                </Field>
-                <Button type="submit" className="h-11 w-full" disabled={busy}>
-                  {linkLoading ? (
-                    <Spinner data-icon="inline-start" />
-                  ) : (
-                    <Mail data-icon="inline-start" />
-                  )}
-                  Recevoir un lien de connexion
+            {linkSent ? (
+              <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-center">
+                <p className="text-sm font-medium">Vérifie ta boîte mail</p>
+                <p className="mt-1 text-xs text-muted-foreground text-pretty">
+                  On a envoyé un lien de connexion à {email}. Clique dessus pour te connecter.
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="mt-3 h-8 text-xs"
+                  onClick={() => setLinkSent(false)}
+                >
+                  Utiliser une autre adresse
                 </Button>
-              </FieldGroup>
-            </form>
+              </div>
+            ) : (
+              <form onSubmit={handleMagicLink}>
+                <FieldGroup>
+                  <Field data-invalid={error ? true : undefined}>
+                    <FieldLabel htmlFor="email">Adresse e-mail</FieldLabel>
+                    <Input
+                      id="email"
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      placeholder="marie.laurent@email.com"
+                      className="h-11"
+                      value={email}
+                      aria-invalid={error ? true : undefined}
+                      onChange={(e) => {
+                        setEmail(e.target.value)
+                        if (error) setError(null)
+                      }}
+                      disabled={busy}
+                    />
+                    {error ? (
+                      <FieldDescription className="text-destructive">
+                        {error}
+                      </FieldDescription>
+                    ) : (
+                      <FieldDescription>
+                        On t’enverra un lien de connexion sécurisé.
+                      </FieldDescription>
+                    )}
+                  </Field>
+                  <Button type="submit" className="h-11 w-full" disabled={busy}>
+                    {linkLoading ? (
+                      <Spinner data-icon="inline-start" />
+                    ) : (
+                      <Mail data-icon="inline-start" />
+                    )}
+                    Recevoir un lien de connexion
+                  </Button>
+                </FieldGroup>
+              </form>
+            )}
           </CardContent>
         </Card>
 
