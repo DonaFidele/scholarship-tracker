@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { levelLabels } from '@/components/scholarship/metadata-badges'
 import { StatCards } from '@/components/applications/stat-cards'
 import { ApplicationTable } from '@/components/applications/application-table'
 import { ApplicationCards } from '@/components/applications/application-cards'
@@ -174,7 +175,12 @@ export function ApplicationsView({
             onValueChange={(v) => setLevelFilter(v as Level | typeof NONE)}
           >
             <SelectTrigger size="sm" className="w-[130px]" aria-label="Niveau">
-              <SelectValue placeholder="Niveau" />
+              <SelectValue placeholder="Niveau">
+                {(value) =>
+                  value === NONE
+                    ? 'Tous niveaux'
+                    : levelLabels[value as Level]}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={NONE}>Tous niveaux</SelectItem>

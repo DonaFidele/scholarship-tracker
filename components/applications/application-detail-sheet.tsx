@@ -286,17 +286,15 @@ export function ApplicationDetailSheet({
               </Button>
             ) : (
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="w-full">
-                    <Button
-                      variant="outline"
-                      disabled
-                      className="pointer-events-none w-full"
-                    >
-                      <Sparkles data-icon="inline-start" />
-                      Récupérer les détails depuis le site officiel
-                    </Button>
-                  </span>
+                <TooltipTrigger render={<span className="w-full" />}>
+                  <Button
+                    variant="outline"
+                    disabled
+                    className="pointer-events-none w-full"
+                  >
+                    <Sparkles data-icon="inline-start" />
+                    Récupérer les détails depuis le site officiel
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>Aucun lien disponible</TooltipContent>
               </Tooltip>

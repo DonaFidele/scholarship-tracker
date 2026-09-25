@@ -13,6 +13,7 @@ import {
 import { formatDateFr } from '@/lib/format'
 import type {
   Application,
+  ApplicationWithChecklist,
   BeninEligibility,
   ScholarshipDetails,
 } from '@/lib/types'
@@ -64,7 +65,7 @@ export function DetailsProposalCard({
   onApply,
   onDismiss,
 }: {
-  application: Application
+  application: ApplicationWithChecklist
   proposal: ScholarshipDetails
   applying: boolean
   onApply: (patch: DetailsPatch, documentsToAdd: string[]) => void
