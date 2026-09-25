@@ -298,9 +298,9 @@ export default function ApplicationsPage() {
         detailsProposal={detailsProposal}
         applyingDetails={applyingDetails}
         onFetchDetails={() => selected && handleFetchDetails(selected.id)}
-        onApplyDetails={(details, createChecklist) =>
+        onApplyDetails={(detailsPatch, documentsToAdd) =>
           selected &&
-          handleApplyDetails(selected.id, details, createChecklist)
+          handleApplyDetails(selected.id, detailsPatch, documentsToAdd)
         }
         onDismissDetails={resetDetails}
       />

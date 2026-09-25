@@ -5,10 +5,9 @@ import { cn } from 'cn'
 import {
   ExternalLink,
   Plus,
-  RefreshCw,
+  ShieldAlert,
   Sparkles,
   Trash2,
-  TriangleAlert,
 } from 'lucide-react'
 import {
   Sheet,
@@ -25,6 +24,18 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
   Progress,
   ProgressIndicator,
   ProgressTrack,
@@ -32,27 +43,47 @@ import {
 import { DeadlineBadge } from '@/components/deadline-badge'
 import { StatusSelect } from '@/components/applications/status-select'
 import { FavoriteToggle } from '@/components/applications/favorite-toggle'
+import { DetailsProposalCard } from '@/components/applications/details-proposal-card'
 import { dossierCounts } from '@/components/applications/dossier-progress'
-import {
-  MetadataBadges,
-  coverageLabels,
-  levelLabels,
-} from '@/components/scholarship/metadata-badges'
+import { MetadataBadges } from '@/components/scholarship/metadata-badges'
 import { formatDateFr } from '@/lib/format'
 import type {
   Application,
   ApplicationStatus,
   ApplicationWithChecklist,
   BeninEligibility,
+  Coverage,
+  Level,
   ScholarshipDetails,
 } from '@/lib/types'
 
 const NOTES_MAX = 2000
+const COVERED_MAX = 1000
+const ELIGIBILITY_MAX = 2000
 
 type InfoPatch = Partial<
   Pick<
     Application,
+    | 'level'
+    | 'coverage'
+    | 'benin_eligible'
     | 'opens_at'
+    | 'results_at'
+    | 'apply_link'
+    | 'covered_costs'
+    | 'eligibility_notes'
+  >
+>
+
+type DetailsPatch = Partial<
+  Pick<
+    Application,
+    | 'level'
+    | 'coverage'
+    | 'benin_eligible'
+    | 'asks_fee'
+    | 'opens_at'
+    | 'deadline'
     | 'results_at'
     | 'apply_link'
     | 'covered_costs'
@@ -62,11 +93,7 @@ type InfoPatch = Partial<
 
 type DetailsState = 'idle' | 'loading' | 'error' | 'ready'
 
-const beninProposalLabels: Record<BeninEligibility, string> = {
-  yes: 'Éligible',
-  no: 'Non éligible',
-  unknown: 'À vérifier',
-}
+const NONE = '__none__'
 
 export function ApplicationDetailSheet({
   application,
@@ -108,21 +135,16 @@ export function ApplicationDetailSheet({
   detailsProposal: ScholarshipDetails | null
   applyingDetails: boolean
   onFetchDetails: () => void
-  onApplyDetails: (
-    details: ScholarshipDetails,
-    createChecklist: boolean,
-  ) => void
+  onApplyDetails: (patch: DetailsPatch, documentsToAdd: string[]) => void
   onDismissDetails: () => void
 }) {
   const [newItem, setNewItem] = useState('')
 
-  // Local mirror of notes so typing feels instant; synced from props on open.
+  // Local mirrors so typing feels instant; synced from props when a new app opens.
   const [notes, setNotes] = useState('')
-  // Local mirror of free-text info fields, committed on blur.
   const [applyLink, setApplyLink] = useState('')
   const [coveredCosts, setCoveredCosts] = useState('')
   const [eligibility, setEligibility] = useState('')
-  const [createChecklist, setCreateChecklist] = useState(true)
   const lastAppId = useRef<string | null>(null)
 
   useEffect(() => {
@@ -131,7 +153,6 @@ export function ApplicationDetailSheet({
       setApplyLink(application.apply_link ?? '')
       setCoveredCosts(application.covered_costs ?? '')
       setEligibility(application.eligibility_notes ?? '')
-      setCreateChecklist(true)
       lastAppId.current = application.id
       setNewItem('')
     }
@@ -143,6 +164,7 @@ export function ApplicationDetailSheet({
   if (!application) return null
 
   const app = application
+  const hasLink = Boolean(app.link || app.apply_link)
   const items = [...app.checklist_items].sort(
     (a, b) => a.sort_order - b.sort_order,
   )
@@ -205,20 +227,17 @@ export function ApplicationDetailSheet({
         </SheetHeader>
 
         <div className="flex flex-col gap-6 p-4">
-          {/* Auto details */}
-          <AutoDetails
-            hasLink={Boolean(app.link || app.apply_link)}
-            checkedAt={app.details_checked_at}
-            state={detailsState}
-            error={detailsError}
-            proposal={detailsProposal}
-            applying={applyingDetails}
-            createChecklist={createChecklist}
-            onCreateChecklistChange={setCreateChecklist}
-            onFetch={onFetchDetails}
-            onApply={onApplyDetails}
-            onDismiss={onDismissDetails}
-          />
+          {/* Fee warning */}
+          {app.asks_fee === true && (
+            <Alert variant="destructive">
+              <ShieldAlert />
+              <AlertTitle>Attention aux frais de candidature</AlertTitle>
+              <AlertDescription>
+                Cette page mentionne des frais de candidature. Méfie-toi : une
+                vraie bourse ne demande jamais de payer pour postuler.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Deadline + status */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -246,10 +265,139 @@ export function ApplicationDetailSheet({
             </div>
           </div>
 
-          {/* Key dates + application link */}
+          {/* Informations clés */}
           <section className="flex flex-col gap-3">
             <h3 className="font-medium">Informations clés</h3>
+
+            {/* Fetch details */}
+            {hasLink ? (
+              <Button
+                variant="outline"
+                onClick={onFetchDetails}
+                disabled={detailsState === 'loading'}
+                className="w-full"
+              >
+                {detailsState === 'loading' ? (
+                  <Spinner data-icon="inline-start" />
+                ) : (
+                  <Sparkles data-icon="inline-start" />
+                )}
+                Récupérer les détails depuis le site officiel
+              </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="w-full">
+                    <Button
+                      variant="outline"
+                      disabled
+                      className="pointer-events-none w-full"
+                    >
+                      <Sparkles data-icon="inline-start" />
+                      Récupérer les détails depuis le site officiel
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Aucun lien disponible</TooltipContent>
+              </Tooltip>
+            )}
+
+            {detailsState === 'loading' && (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Spinner />
+                Analyse de la page…
+              </p>
+            )}
+
+            {detailsState === 'error' && (
+              <p className="text-sm text-destructive">
+                {detailsError ?? 'Analyse impossible.'}{' '}
+                <button
+                  type="button"
+                  onClick={onFetchDetails}
+                  className="font-medium underline underline-offset-2"
+                >
+                  Réessayer
+                </button>
+              </p>
+            )}
+
+            {detailsState === 'ready' && detailsProposal && (
+              <DetailsProposalCard
+                application={app}
+                proposal={detailsProposal}
+                applying={applyingDetails}
+                onApply={onApplyDetails}
+                onDismiss={onDismissDetails}
+              />
+            )}
+
             <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="detail-level">Niveau</Label>
+                <Select
+                  value={app.level ?? NONE}
+                  onValueChange={(v) =>
+                    onInfoChange(app.id, {
+                      level: v === NONE ? null : (v as Level),
+                    })
+                  }
+                >
+                  <SelectTrigger id="detail-level">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Non précisé</SelectItem>
+                    <SelectItem value="licence">Licence</SelectItem>
+                    <SelectItem value="master">Master</SelectItem>
+                    <SelectItem value="doctorat">Doctorat</SelectItem>
+                    <SelectItem value="autre">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="detail-coverage">Couverture</Label>
+                <Select
+                  value={app.coverage ?? NONE}
+                  onValueChange={(v) =>
+                    onInfoChange(app.id, {
+                      coverage: v === NONE ? null : (v as Coverage),
+                    })
+                  }
+                >
+                  <SelectTrigger id="detail-coverage">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Non précisée</SelectItem>
+                    <SelectItem value="full">Complète</SelectItem>
+                    <SelectItem value="partial">Partielle</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="detail-benin">Bénin éligible</Label>
+                <Select
+                  value={app.benin_eligible}
+                  onValueChange={(v) =>
+                    onInfoChange(app.id, {
+                      benin_eligible: v as BeninEligibility,
+                    })
+                  }
+                >
+                  <SelectTrigger id="detail-benin">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unknown">À vérifier</SelectItem>
+                    <SelectItem value="yes">Oui</SelectItem>
+                    <SelectItem value="no">Non</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="detail-opens">Ouverture des candidatures</Label>
                 <Input
@@ -261,8 +409,9 @@ export function ApplicationDetailSheet({
                   }
                 />
               </div>
+
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="detail-results">Résultats attendus</Label>
+                <Label htmlFor="detail-results">Date des résultats</Label>
                 <Input
                   id="detail-results"
                   type="date"
@@ -272,53 +421,67 @@ export function ApplicationDetailSheet({
                   }
                 />
               </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="detail-apply-link">Lien de candidature</Label>
+                <Input
+                  id="detail-apply-link"
+                  type="url"
+                  inputMode="url"
+                  value={applyLink}
+                  onChange={(e) => setApplyLink(e.target.value)}
+                  onBlur={() => commit('apply_link', applyLink)}
+                  placeholder="https://…"
+                />
+                {app.apply_link && (
+                  <a
+                    href={app.apply_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-fit items-center gap-1.5 text-sm text-primary hover:underline"
+                  >
+                    Ouvrir
+                    <ExternalLink className="size-3.5" />
+                  </a>
+                )}
+              </div>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="detail-apply-link">Lien de candidature</Label>
-              <Input
-                id="detail-apply-link"
-                type="url"
-                inputMode="url"
-                value={applyLink}
-                onChange={(e) => setApplyLink(e.target.value)}
-                onBlur={() => commit('apply_link', applyLink)}
-                placeholder="https://…"
-              />
-              {app.apply_link && (
-                <a
-                  href={app.apply_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex w-fit items-center gap-1.5 text-sm text-primary hover:underline"
-                >
-                  Ouvrir le formulaire
-                  <ExternalLink className="size-3.5" />
-                </a>
-              )}
-            </div>
+
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-covered">Frais couverts</Label>
-              <Input
+              <Textarea
                 id="detail-covered"
+                rows={2}
+                maxLength={COVERED_MAX}
                 value={coveredCosts}
                 onChange={(e) => setCoveredCosts(e.target.value)}
                 onBlur={() => commit('covered_costs', coveredCosts)}
-                placeholder="Ex : Scolarité, voyage, allocation mensuelle"
+                placeholder="Ex : scolarité, logement, billet d’avion…"
               />
             </div>
+
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="detail-eligibility">
                 Conditions d’éligibilité
               </Label>
               <Textarea
                 id="detail-eligibility"
+                rows={4}
+                maxLength={ELIGIBILITY_MAX}
                 value={eligibility}
                 onChange={(e) => setEligibility(e.target.value)}
                 onBlur={() => commit('eligibility_notes', eligibility)}
                 placeholder="Nationalité, âge, diplôme requis…"
-                className="min-h-20"
               />
             </div>
+
+            <p className="text-xs text-muted-foreground text-pretty">
+              {app.details_checked_at
+                ? `Vérifié le ${formatDateFr(app.details_checked_at.slice(0, 10))}.`
+                : 'Jamais vérifié.'}{' '}
+              Ces informations peuvent être incomplètes. Vérifie sur le site
+              officiel.
+            </p>
           </section>
 
           {/* Checklist */}
@@ -376,7 +539,7 @@ export function ApplicationDetailSheet({
               ))}
             </ul>
 
-            {allDone && (
+            {allDone && total > 0 && (
               <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
                 Dossier complet 🎉
               </p>
@@ -455,196 +618,5 @@ export function ApplicationDetailSheet({
         </div>
       </SheetContent>
     </Sheet>
-  )
-}
-
-function AutoDetails({
-  hasLink,
-  checkedAt,
-  state,
-  error,
-  proposal,
-  applying,
-  createChecklist,
-  onCreateChecklistChange,
-  onFetch,
-  onApply,
-  onDismiss,
-}: {
-  hasLink: boolean
-  checkedAt: string | null
-  state: DetailsState
-  error: string | null
-  proposal: ScholarshipDetails | null
-  applying: boolean
-  createChecklist: boolean
-  onCreateChecklistChange: (value: boolean) => void
-  onFetch: () => void
-  onApply: (details: ScholarshipDetails, createChecklist: boolean) => void
-  onDismiss: () => void
-}) {
-  return (
-    <section className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <h3 className="flex items-center gap-1.5 font-medium">
-            <Sparkles className="size-4 text-indigo-500" />
-            Compléter automatiquement
-          </h3>
-          <p className="text-xs text-muted-foreground text-pretty">
-            {checkedAt
-              ? `Dernière analyse le ${formatDateFr(checkedAt.slice(0, 10))}.`
-              : 'Analyse la page officielle pour pré-remplir les informations.'}
-          </p>
-        </div>
-        {(state === 'idle' || state === 'error') && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onFetch}
-            disabled={!hasLink}
-            className="shrink-0"
-          >
-            {checkedAt ? (
-              <RefreshCw data-icon="inline-start" />
-            ) : (
-              <Sparkles data-icon="inline-start" />
-            )}
-            {checkedAt ? 'Réanalyser' : 'Analyser'}
-          </Button>
-        )}
-      </div>
-
-      {!hasLink && state === 'idle' && (
-        <p className="text-xs text-muted-foreground">
-          Ajoute un lien officiel ou un lien de candidature pour activer
-          l’analyse.
-        </p>
-      )}
-
-      {state === 'loading' && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Spinner />
-          Analyse de la page en cours…
-        </div>
-      )}
-
-      {state === 'error' && error && (
-        <Alert variant="destructive">
-          <TriangleAlert />
-          <AlertTitle>Analyse impossible</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {state === 'ready' && proposal && (
-        <div className="flex flex-col gap-3">
-          <p className="text-xs text-muted-foreground text-pretty">
-            Informations proposées à partir de la page. Vérifie-les avant de les
-            appliquer.
-          </p>
-          <dl className="flex flex-col divide-y divide-border/60 rounded-lg border border-border/60 bg-background text-sm">
-            <ProposalRow
-              label="Niveau"
-              value={proposal.level ? levelLabels[proposal.level] : null}
-            />
-            <ProposalRow
-              label="Couverture"
-              value={
-                proposal.coverage ? coverageLabels[proposal.coverage] : null
-              }
-            />
-            <ProposalRow
-              label="Éligibilité Bénin"
-              value={beninProposalLabels[proposal.benin_eligible]}
-            />
-            <ProposalRow
-              label="Frais demandés"
-              value={
-                proposal.asks_fee === null
-                  ? null
-                  : proposal.asks_fee
-                    ? 'Oui — prudence'
-                    : 'Non'
-              }
-            />
-            <ProposalRow
-              label="Ouverture"
-              value={formatDateFr(proposal.opens_at) || null}
-            />
-            <ProposalRow
-              label="Date limite"
-              value={formatDateFr(proposal.deadline) || null}
-            />
-            <ProposalRow
-              label="Résultats"
-              value={formatDateFr(proposal.results_at) || null}
-            />
-            <ProposalRow
-              label="Frais couverts"
-              value={proposal.covered_costs}
-            />
-            <ProposalRow
-              label="Éligibilité"
-              value={proposal.eligibility_summary}
-            />
-          </dl>
-
-          {proposal.required_documents.length > 0 && (
-            <label className="flex items-start gap-2.5 rounded-lg border border-border/60 bg-background p-3">
-              <Checkbox
-                checked={createChecklist}
-                onCheckedChange={(c) => onCreateChecklistChange(c === true)}
-                className="mt-0.5"
-              />
-              <span className="flex flex-col gap-1">
-                <span className="text-sm font-medium">
-                  Créer la checklist des documents
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {proposal.required_documents.join(', ')}
-                </span>
-              </span>
-            </label>
-          )}
-
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => onApply(proposal, createChecklist)}
-              disabled={applying}
-            >
-              {applying && <Spinner data-icon="inline-start" />}
-              Appliquer
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onDismiss}
-              disabled={applying}
-            >
-              Ignorer
-            </Button>
-          </div>
-        </div>
-      )}
-    </section>
-  )
-}
-
-function ProposalRow({
-  label,
-  value,
-}: {
-  label: string
-  value: string | null
-}) {
-  return (
-    <div className="flex items-start justify-between gap-3 px-3 py-2">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-right text-pretty">
-        {value ?? <span className="text-muted-foreground/60">Non trouvé</span>}
-      </dd>
-    </div>
   )
 }

@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Bookmark, Plus, Search } from 'lucide-react'
+import { Bookmark, Plus, Search, Star } from 'lucide-react'
+import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import {
   Empty,
@@ -13,6 +14,13 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { StatCards } from '@/components/applications/stat-cards'
 import { ApplicationTable } from '@/components/applications/application-table'
 import { ApplicationCards } from '@/components/applications/application-cards'
@@ -20,6 +28,7 @@ import { daysLeft } from '@/lib/deadline'
 import type {
   ApplicationStatus,
   ApplicationWithChecklist,
+  Level,
 } from '@/lib/types'
 
 type FilterKey = 'all' | 'todo' | 'in_progress' | 'submitted' | 'done'
@@ -60,11 +69,14 @@ function sortByDeadline(
   return 0
 }
 
+const NONE = '__all__'
+
 export function ApplicationsView({
   applications,
   onStatusChange,
   onDeadlineChange,
   onDelete,
+  onToggleFavorite,
   onOpenApplication,
   onAddClick,
 }: {
@@ -72,17 +84,22 @@ export function ApplicationsView({
   onStatusChange: (id: string, status: ApplicationStatus) => void
   onDeadlineChange: (id: string, deadline: string | null) => void
   onDelete: (id: string) => void
+  onToggleFavorite: (id: string, value: boolean) => void
   onOpenApplication: (id: string) => void
   onAddClick: () => void
 }) {
   const [filter, setFilter] = useState<FilterKey>('all')
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [levelFilter, setLevelFilter] = useState<Level | typeof NONE>(NONE)
 
   const visible = useMemo(
     () =>
       applications
         .filter((a) => matchesFilter(a, filter))
+        .filter((a) => (favoritesOnly ? a.is_favorite : true))
+        .filter((a) => (levelFilter === NONE ? true : a.level === levelFilter))
         .sort(sortByDeadline),
-    [applications, filter],
+    [applications, filter, favoritesOnly, levelFilter],
   )
 
   if (applications.length === 0) {
@@ -123,23 +140,55 @@ export function ApplicationsView({
 
       <StatCards applications={applications} />
 
-      <Tabs
-        value={filter}
-        onValueChange={(v) => setFilter(v as FilterKey)}
-        className="w-full"
-      >
-        <TabsList className="w-full justify-start overflow-x-auto md:w-auto">
-          {filters.map((f) => (
-            <TabsTrigger key={f.key} value={f.key}>
-              {f.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Tabs
+          value={filter}
+          onValueChange={(v) => setFilter(v as FilterKey)}
+          className="w-full lg:w-auto"
+        >
+          <TabsList className="w-full justify-start overflow-x-auto lg:w-auto">
+            {filters.map((f) => (
+              <TabsTrigger key={f.key} value={f.key}>
+                {f.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={favoritesOnly ? 'default' : 'outline'}
+            size="sm"
+            aria-pressed={favoritesOnly}
+            onClick={() => setFavoritesOnly((v) => !v)}
+          >
+            <Star
+              className={cn('size-4', favoritesOnly && 'fill-current')}
+              data-icon="inline-start"
+            />
+            Favoris
+          </Button>
+          <Select
+            value={levelFilter}
+            onValueChange={(v) => setLevelFilter(v as Level | typeof NONE)}
+          >
+            <SelectTrigger size="sm" className="w-[130px]" aria-label="Niveau">
+              <SelectValue placeholder="Niveau" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>Tous niveaux</SelectItem>
+              <SelectItem value="licence">Licence</SelectItem>
+              <SelectItem value="master">Master</SelectItem>
+              <SelectItem value="doctorat">Doctorat</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       {visible.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-          Aucune candidature dans cette catégorie.
+          Aucune candidature pour ces filtres.
         </p>
       ) : (
         <>
@@ -149,6 +198,7 @@ export function ApplicationsView({
               onStatusChange={onStatusChange}
               onDeadlineChange={onDeadlineChange}
               onDelete={onDelete}
+              onToggleFavorite={onToggleFavorite}
               onOpenApplication={onOpenApplication}
             />
           </div>
@@ -158,6 +208,7 @@ export function ApplicationsView({
               onStatusChange={onStatusChange}
               onDeadlineChange={onDeadlineChange}
               onDelete={onDelete}
+              onToggleFavorite={onToggleFavorite}
               onOpenApplication={onOpenApplication}
             />
           </div>

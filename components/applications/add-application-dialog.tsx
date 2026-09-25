@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { cn } from 'cn'
+import { ChevronDown } from 'lucide-react'
 import {
   Dialog,
   DialogClose,
@@ -11,14 +12,37 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { StatusSelect } from '@/components/applications/status-select'
-import type { ApplicationStatus, Scholarship } from '@/lib/types'
+import type {
+  ApplicationInfo,
+  ApplicationStatus,
+  Coverage,
+  Level,
+  Scholarship,
+} from '@/lib/types'
 
-type AddPayload = Scholarship & { status: ApplicationStatus }
+type AddPayload = Scholarship &
+  { status: ApplicationStatus } & Partial<
+    Pick<ApplicationInfo, 'apply_link' | 'opens_at' | 'results_at'>
+  >
+
+const NONE = '__none__'
 
 const empty = {
   name: '',
@@ -27,6 +51,11 @@ const empty = {
   country: '',
   deadline: '',
   status: 'todo' as ApplicationStatus,
+  level: NONE as Level | typeof NONE,
+  coverage: NONE as Coverage | typeof NONE,
+  opens_at: '',
+  results_at: '',
+  apply_link: '',
 }
 
 export function AddApplicationDialog({
@@ -78,7 +107,14 @@ export function AddApplicationDialog({
       amount: form.amount.trim() || null,
       country: form.country.trim() || null,
       deadline: form.deadline || null,
+      level: form.level === NONE ? null : form.level,
+      coverage: form.coverage === NONE ? null : form.coverage,
+      benin_eligible: 'unknown',
+      asks_fee: null,
       status: form.status,
+      apply_link: form.apply_link.trim() || null,
+      opens_at: form.opens_at || null,
+      results_at: form.results_at || null,
     })
   }
 
@@ -169,6 +205,91 @@ export function AddApplicationDialog({
               className="w-full"
             />
           </div>
+
+          <Collapsible className="flex flex-col gap-4 rounded-lg border border-border p-3">
+            <CollapsibleTrigger
+              render={
+                <button
+                  type="button"
+                  className="group flex items-center justify-between gap-2 text-sm font-medium"
+                />
+              }
+            >
+              Plus de détails (optionnel)
+              <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-[panel-open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="flex flex-col gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="add-level">Niveau</Label>
+                  <Select
+                    value={form.level}
+                    onValueChange={(v) =>
+                      update('level', v as Level | typeof NONE)
+                    }
+                  >
+                    <SelectTrigger id="add-level" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>Non précisé</SelectItem>
+                      <SelectItem value="licence">Licence</SelectItem>
+                      <SelectItem value="master">Master</SelectItem>
+                      <SelectItem value="doctorat">Doctorat</SelectItem>
+                      <SelectItem value="autre">Autre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="add-coverage">Couverture</Label>
+                  <Select
+                    value={form.coverage}
+                    onValueChange={(v) =>
+                      update('coverage', v as Coverage | typeof NONE)
+                    }
+                  >
+                    <SelectTrigger id="add-coverage" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>Non précisée</SelectItem>
+                      <SelectItem value="full">Complète</SelectItem>
+                      <SelectItem value="partial">Partielle</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="add-opens">Ouverture des candidatures</Label>
+                  <Input
+                    id="add-opens"
+                    type="date"
+                    value={form.opens_at}
+                    onChange={(e) => update('opens_at', e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="add-results">Date des résultats</Label>
+                  <Input
+                    id="add-results"
+                    type="date"
+                    value={form.results_at}
+                    onChange={(e) => update('results_at', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="add-apply-link">Lien de candidature</Label>
+                <Input
+                  id="add-apply-link"
+                  type="url"
+                  inputMode="url"
+                  value={form.apply_link}
+                  onChange={(e) => update('apply_link', e.target.value)}
+                  placeholder="https://…"
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
