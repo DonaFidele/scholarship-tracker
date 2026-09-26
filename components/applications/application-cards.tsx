@@ -7,6 +7,8 @@ import { DeadlineCell } from '@/components/applications/deadline-cell'
 import { DeleteDialog } from '@/components/applications/delete-dialog'
 import { DeadlineBadge } from '@/components/deadline-badge'
 import { DossierProgress } from '@/components/applications/dossier-progress'
+import { FavoriteToggle } from '@/components/applications/favorite-toggle'
+import { MetadataBadges } from '@/components/scholarship/metadata-badges'
 import { daysLeft } from '@/lib/deadline'
 import type { ApplicationStatus, ApplicationWithChecklist } from '@/lib/types'
 
@@ -20,12 +22,14 @@ export function ApplicationCards({
   onStatusChange,
   onDeadlineChange,
   onDelete,
+  onToggleFavorite,
   onOpenApplication,
 }: {
   applications: ApplicationWithChecklist[]
   onStatusChange: (id: string, status: ApplicationStatus) => void
   onDeadlineChange: (id: string, deadline: string | null) => void
   onDelete: (id: string) => void
+  onToggleFavorite: (id: string, value: boolean) => void
   onOpenApplication: (id: string) => void
 }) {
   return (
@@ -53,16 +57,30 @@ export function ApplicationCards({
             )}
           >
             <CardContent className="flex flex-col gap-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-medium leading-snug">{a.name}</span>
-                  {a.country && (
-                    <span className="text-xs text-muted-foreground">
-                      {a.country}
-                    </span>
-                  )}
+              <div className="flex items-start justify-between gap-2">
+                <div onClick={stop}>
+                  <FavoriteToggle
+                    value={a.is_favorite}
+                    onToggle={(v) => onToggleFavorite(a.id, v)}
+                    className="-ml-2 -mt-2"
+                  />
                 </div>
                 <DeadlineBadge deadline={a.deadline} className="mt-0.5 shrink-0" />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="font-medium leading-snug">{a.name}</span>
+                <MetadataBadges
+                  level={a.level}
+                  coverage={a.coverage}
+                  benin={a.benin_eligible}
+                  asksFee={a.asks_fee}
+                />
+                {a.country && (
+                  <span className="text-xs text-muted-foreground">
+                    {a.country}
+                  </span>
+                )}
               </div>
 
               {a.amount && (
