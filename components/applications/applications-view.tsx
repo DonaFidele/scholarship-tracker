@@ -120,7 +120,7 @@ export function ApplicationsView({
           </EmptyHeader>
           <EmptyContent>
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button render={<Link href="/search" />}>
+              <Button nativeButton={false} render={<Link href="/search" />}>
                 <Search data-icon="inline-start" />
                 Rechercher des bourses
               </Button>
