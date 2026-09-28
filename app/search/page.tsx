@@ -1,10 +1,10 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { Navbar } from '@/components/navbar'
 import { SearchView } from '@/components/search/search-view'
-import { getMockApplications, mockSearchResults } from '@/lib/mock-data'
+import { getMockApplications } from '@/lib/mock-data'
 import type { Scholarship, SearchStatus } from '@/lib/types'
 
 export default function SearchPage() {
@@ -15,28 +15,27 @@ export default function SearchPage() {
   // Mock saved applications, used only for the navbar counter here.
   const [applicationsCount] = useState(() => getMockApplications().length)
 
-  const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-  const handleSearch = (query: string) => {
+  const handleSearch = async (query: string) => {
     const q = query.trim()
     if (!q) return
     setStatus('loading')
-    clearTimeout(searchTimer.current)
-    searchTimer.current = setTimeout(() => {
-      const normalized = q.toLowerCase()
-      if (normalized.includes('erreur')) {
-        setResults([])
-        setStatus('error')
-        return
+    try {
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q }),
+      })
+      const data: { results?: Scholarship[]; error?: string } =
+        await response.json()
+      if (!response.ok || !Array.isArray(data.results)) {
+        throw new Error(data.error ?? 'La recherche a échoué.')
       }
-      if (normalized.includes('vide')) {
-        setResults([])
-        setStatus('success')
-        return
-      }
-      setResults(mockSearchResults)
+      setResults(data.results)
       setStatus('success')
-    }, 1100)
+    } catch {
+      setResults([])
+      setStatus('error')
+    }
   }
 
   const handleSave = (scholarship: Scholarship) => {

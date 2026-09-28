@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { Scholarship } from '@/lib/types'
+import type { Scholarship, Level, Coverage, BeninEligibility } from '@/lib/types'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-const GENERIC_SEARCH_ERROR =
-  'Une erreur est survenue pendant la recherche.'
+const GENERIC_SEARCH_ERROR = 'Une erreur est survenue pendant la recherche.'
 const UPSTREAM_ERROR = 'Le service de recherche est temporairement indisponible.'
+
+const LEVELS: Level[] = ['licence', 'master', 'doctorat', 'autre']
+const COVERAGES: Coverage[] = ['full', 'partial']
 
 type TavilyResult = {
   title?: string
@@ -22,6 +24,10 @@ type GeminiScholarship = {
   deadline?: unknown
   country?: unknown
   source?: unknown
+  level?: unknown
+  coverage?: unknown
+  benin_eligible?: unknown
+  asks_fee?: unknown
 }
 
 export async function POST(request: Request) {
@@ -39,10 +45,7 @@ export async function POST(request: Request) {
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json(
-        { error: 'Requête invalide.' },
-        { status: 400 },
-      )
+      return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 })
     }
 
     const query =
@@ -127,9 +130,13 @@ Pour chaque bourse, renvoie un objet JSON avec:
 - deadline: string YYYY-MM-DD UNIQUEMENT si le jour, le mois ET l'année sont explicites dans l'extrait; sinon null. N'infère pas une année à partir de la date du jour. N'utilise pas de dates relatives.
 - country: string ou null (pays / région de la bourse)
 - source: number (numéro de l'extrait, commençant à 1)
+- level: "licence" | "master" | "doctorat" | "autre" | null. Uniquement si le niveau est clairement indiqué dans l'extrait.
+- coverage: "full" si la bourse couvre explicitement la scolarité ET une allocation de vie, ou est décrite comme "fully funded" / "full scholarship"; "partial" si elle est décrite comme partielle ou ne couvre qu'une partie; sinon null.
+- benin_eligible: "yes" UNIQUEMENT si le Bénin est nommé explicitement, ou si le texte dit ouvert à toutes les nationalités / tous les pays, ou à un groupe dont le Bénin fait partie sans ambiguïté (ex: "pays africains", "pays en développement"). "no" UNIQUEMENT si le texte exclut explicitement le Bénin ou les Africains, ou réserve la bourse à une nationalité ou un pays précis dont le Bénin ne fait pas partie. Dans tous les autres cas: "unknown". EN CAS DE DOUTE: "unknown".
+- asks_fee: true UNIQUEMENT si le texte indique explicitement que le candidat doit payer pour postuler (frais de dossier, de traitement, virement demandé); false si le texte dit explicitement qu'il n'y a pas de frais; sinon null.
 
 Règles:
-- N'INVENTE RIEN. Si une information n'est pas dans l'extrait, mets null.
+- N'INVENTE RIEN. Si une information n'est pas dans l'extrait, mets null (ou "unknown" pour benin_eligible).
 - Ignore les pages qui ne décrivent pas une bourse précise.
 - Réponds uniquement avec un JSON de la forme: {"scholarships":[...]}
 
@@ -152,11 +159,7 @@ ${extracts}`
     )
 
     if (!geminiRes.ok) {
-      console.error(
-        'Gemini generateContent failed',
-        geminiRes.status,
-        await geminiRes.text(),
-      )
+      console.error('Gemini generateContent failed', geminiRes.status, await geminiRes.text())
       return NextResponse.json({ error: UPSTREAM_ERROR }, { status: 502 })
     }
 
@@ -209,6 +212,10 @@ ${extracts}`
         deadline: normalizeDeadline(item.deadline),
         country: asNonEmptyString(item.country),
         link,
+        level: asLevel(item.level),
+        coverage: asCoverage(item.coverage),
+        benin_eligible: asBeninEligibility(item.benin_eligible),
+        asks_fee: asNullableBoolean(item.asks_fee),
       })
     }
 
@@ -253,4 +260,27 @@ function normalizeDeadline(value: unknown): string | null {
   if (!raw || !DATE_RE.test(raw)) return null
   if (Number.isNaN(Date.parse(raw))) return null
   return raw
+}
+
+function asLevel(value: unknown): Level | null {
+  const raw = asNonEmptyString(value)
+  if (!raw) return null
+  return LEVELS.includes(raw as Level) ? (raw as Level) : null
+}
+
+function asCoverage(value: unknown): Coverage | null {
+  const raw = asNonEmptyString(value)
+  if (!raw) return null
+  return COVERAGES.includes(raw as Coverage) ? (raw as Coverage) : null
+}
+
+function asBeninEligibility(value: unknown): BeninEligibility {
+  const raw = asNonEmptyString(value)
+  if (raw === 'yes' || raw === 'no') return raw
+  return 'unknown'
+}
+
+function asNullableBoolean(value: unknown): boolean | null {
+  if (typeof value === 'boolean') return value
+  return null
 }
