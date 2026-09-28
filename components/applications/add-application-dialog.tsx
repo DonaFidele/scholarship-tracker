@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { cn } from 'cn'
 import { ChevronDown } from 'lucide-react'
 import {
@@ -74,13 +74,13 @@ export function AddApplicationDialog({
   const [form, setForm] = useState(empty)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Reset the form each time the dialog is opened.
-  useEffect(() => {
-    if (open) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
       setForm(empty)
       setErrors({})
     }
-  }, [open])
+    onOpenChange(nextOpen)
+  }
 
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [key]: value }))
@@ -119,7 +119,7 @@ export function AddApplicationDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto p-0 sm:max-w-lg">
         <DialogHeader className="p-4">
           <DialogTitle>Ajouter une bourse</DialogTitle>

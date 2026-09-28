@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { Navbar } from '@/components/navbar'
@@ -196,7 +196,7 @@ export default function ApplicationsPage() {
     setDetailsError('L’analyse automatique des détails n’est pas disponible pour le moment.')
   }
 
-  const handleApplyDetails = (_id: string, _detailsPatch: DetailsPatch, _documentsToAdd: string[]) => {
+  const handleApplyDetails: (id: string, detailsPatch: DetailsPatch, documentsToAdd: string[]) => void = () => {
     setApplyingDetails(false)
     setDetailsState('error')
     setDetailsError('Aucun détail analysé à appliquer.')

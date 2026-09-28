@@ -11,6 +11,7 @@ import {
   LogOut,
   Moon,
   Search,
+  Settings as SettingsIcon,
   Sun,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -31,7 +32,7 @@ import {
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
-type ActivePage = 'search' | 'applications'
+type ActivePage = 'search' | 'applications' | 'settings'
 
 const links: {
   key: ActivePage
@@ -50,20 +51,12 @@ const links: {
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
   const isDark = resolvedTheme === 'dark'
   return (
     <Button
       variant="ghost"
       size="icon"
-      aria-label={
-        !mounted
-          ? 'Changer de thème'
-          : isDark
-            ? 'Activer le thème clair'
-            : 'Activer le thème sombre'
-      }
+      aria-label="Changer de thème"
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
     >
       <Sun className="hidden dark:block" />
@@ -159,6 +152,10 @@ export function Navbar({
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
+                  <DropdownMenuItem render={<Link href="/settings" />}>
+                    <SettingsIcon />
+                    Paramètres
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"
                     onClick={async () => {

@@ -38,7 +38,6 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('error') === 'auth') {
       const message = 'La connexion a échoué. Réessaie.'
-      setError(message)
       toast.error(message)
     }
   }, [])
