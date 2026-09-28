@@ -14,13 +14,20 @@ const UPSTREAM_ERROR = 'Le service de recherche est temporairement indisponible.
 const LEVELS: Level[] = ['licence', 'master', 'doctorat', 'autre']
 const COVERAGES: Coverage[] = ['full', 'partial']
 
+const STOPWORDS = new Set([
+  'the', 'a', 'an', 'for', 'of', 'at', 'in', 'on', 'and', 'to',
+  'scholarship', 'scholarships', 'program', 'programme', 'programs',
+  'grant', 'award', 'fellowship', 'fund', 'funding', 'initiative',
+  'process', 'application',
+])
+
 type TavilyResult = {
   title?: string
   url?: string
   content?: string
 }
 
-type GeminiScholarship = {
+type ExtractedScholarship = {
   name?: unknown
   amount?: unknown
   deadline?: unknown
@@ -30,6 +37,12 @@ type GeminiScholarship = {
   coverage?: unknown
   benin_eligible?: unknown
   asks_fee?: unknown
+}
+
+type Provider = {
+  name: string
+  fetchOnce: () => Promise<Response>
+  extractText: (json: unknown) => string | null
 }
 
 export async function POST(request: Request) {
@@ -66,9 +79,8 @@ export async function POST(request: Request) {
     }
 
     const tavilyKey = process.env.TAVILY_API_KEY
-    const geminiKey = process.env.GEMINI_API_KEY
-    if (!tavilyKey || !geminiKey) {
-      console.error('Missing TAVILY_API_KEY or GEMINI_API_KEY')
+    if (!tavilyKey) {
+      console.error('Missing TAVILY_API_KEY')
       return NextResponse.json({ error: UPSTREAM_ERROR }, { status: 502 })
     }
 
@@ -145,45 +157,45 @@ Règles:
 Extraits:
 ${extracts}`
 
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0,
-            responseMimeType: 'application/json',
-          },
-        }),
-      },
-    )
+    const providers = buildProviders(prompt)
 
-    if (!geminiRes.ok) {
-      console.error('Gemini generateContent failed', geminiRes.status, await geminiRes.text())
+    if (providers.length === 0) {
+      console.error('No AI provider configured')
       return NextResponse.json({ error: UPSTREAM_ERROR }, { status: 502 })
     }
 
-    let geminiJson: unknown
-    try {
-      geminiJson = await geminiRes.json()
-    } catch (err) {
-      console.error('Gemini response is not JSON', err)
-      return NextResponse.json({ error: UPSTREAM_ERROR }, { status: 502 })
+    let rawText: string | null = null
+
+    for (const provider of providers) {
+      const res = await tryProvider(provider.name, provider.fetchOnce)
+      if (!res) continue
+
+      let json: unknown
+      try {
+        json = await res.json()
+      } catch (err) {
+        console.error(`${provider.name} response is not JSON`, err)
+        continue
+      }
+
+      const text = provider.extractText(json)
+      if (text) {
+        rawText = text
+        console.log(`Extraction served by ${provider.name}`)
+        break
+      }
+      console.error(`${provider.name} response missing text`, json)
     }
 
-    const rawText = extractGeminiText(geminiJson)
     if (!rawText) {
-      console.error('Gemini response missing text', geminiJson)
       return NextResponse.json({ error: UPSTREAM_ERROR }, { status: 502 })
     }
 
-    let extracted: GeminiScholarship[]
+    let extracted: ExtractedScholarship[]
     try {
-      extracted = parseGeminiScholarships(rawText)
+      extracted = parseScholarshipsResponse(rawText)
     } catch (err) {
-      console.error('Gemini JSON parse failed', err, rawText)
+      console.error('AI response JSON parse failed', err, rawText)
       return NextResponse.json({ error: UPSTREAM_ERROR }, { status: 502 })
     }
 
@@ -221,11 +233,145 @@ ${extracts}`
       })
     }
 
-    return NextResponse.json({ results })
+    const deduped = dedupeScholarships(results)
+    const active = deduped.filter((s) => !isExpired(s.deadline, today))
+
+    return NextResponse.json({ results: active })
   } catch (err) {
     console.error('Unexpected search error', err)
     return NextResponse.json({ error: GENERIC_SEARCH_ERROR }, { status: 500 })
   }
+}
+
+function buildProviders(prompt: string): Provider[] {
+  const providers: Provider[] = []
+
+  const mistralKey = process.env.MISTRAL_API_KEY
+  if (mistralKey) {
+    providers.push({
+      name: 'mistral',
+      fetchOnce: buildOpenAiCompatibleRequest(
+        'https://api.mistral.ai/v1/chat/completions',
+        mistralKey,
+        'mistral-small-latest',
+        prompt,
+        true,
+      ),
+      extractText: extractOpenAiCompatibleText,
+    })
+  }
+
+  const cerebrasKey = process.env.CEREBRAS_API_KEY
+  if (cerebrasKey) {
+    providers.push({
+      name: 'cerebras',
+      fetchOnce: buildOpenAiCompatibleRequest(
+        'https://api.cerebras.ai/v1/chat/completions',
+        cerebrasKey,
+        process.env.CEREBRAS_MODEL ?? 'llama3.1-8b',
+        prompt,
+        false,
+      ),
+      extractText: extractOpenAiCompatibleText,
+    })
+  }
+
+  const groqKey = process.env.GROQ_API_KEY
+  if (groqKey) {
+    providers.push({
+      name: 'groq',
+      fetchOnce: buildOpenAiCompatibleRequest(
+        'https://api.groq.com/openai/v1/chat/completions',
+        groqKey,
+        process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+        prompt,
+        true,
+      ),
+      extractText: extractOpenAiCompatibleText,
+    })
+  }
+
+  const geminiKey = process.env.GEMINI_API_KEY
+  if (geminiKey) {
+    providers.push({
+      name: 'gemini',
+      fetchOnce: () =>
+        fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: 0,
+                responseMimeType: 'application/json',
+              },
+            }),
+          },
+        ),
+      extractText: extractGeminiText,
+    })
+  }
+
+  return providers
+}
+
+function buildOpenAiCompatibleRequest(
+  url: string,
+  apiKey: string,
+  model: string,
+  prompt: string,
+  useJsonMode: boolean,
+): () => Promise<Response> {
+  return () =>
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0,
+        ...(useJsonMode ? { response_format: { type: 'json_object' } } : {}),
+      }),
+    })
+}
+
+async function tryProvider(
+  name: string,
+  fetchOnce: () => Promise<Response>,
+): Promise<Response | null> {
+  const delays = [1500, 3000]
+
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    let res: Response
+    try {
+      res = await fetchOnce()
+    } catch (err) {
+      console.error(`${name} fetch failed`, err)
+      return null
+    }
+
+    if (res.ok) return res
+
+    const status = res.status
+    const bodyText = await res.text()
+    const retryAfter = res.headers.get("retry-after")
+    if (retryAfter) console.error(`${name} retry-after header:`, retryAfter)
+    console.error(`${name} generateContent failed`, status, bodyText)
+
+    const retryable = status === 429 || status === 503
+    if (!retryable || attempt === delays.length) {
+      return null
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delays[attempt]))
+  }
+
+  return null
 }
 
 function extractGeminiText(data: unknown): string | null {
@@ -239,13 +385,36 @@ function extractGeminiText(data: unknown): string | null {
   return typeof text === 'string' && text.trim() ? text : null
 }
 
-function parseGeminiScholarships(text: string): GeminiScholarship[] {
-  const parsed: unknown = JSON.parse(text)
-  if (Array.isArray(parsed)) return parsed as GeminiScholarship[]
+function extractOpenAiCompatibleText(data: unknown): string | null {
+  if (typeof data !== 'object' || data === null) return null
+  const choices = (data as { choices?: unknown }).choices
+  if (!Array.isArray(choices) || choices.length === 0) return null
+  const message = (choices[0] as { message?: { content?: unknown } }).message
+  const content = message?.content
+  return typeof content === 'string' && content.trim() ? content : null
+}
+
+function parseScholarshipsResponse(text: string): ExtractedScholarship[] {
+  const cleaned = text
+    .trim()
+    .replace(/^```(?:json)?/i, '')
+    .replace(/```$/, '')
+    .trim()
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(cleaned)
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/)
+    if (!match) throw new Error('No JSON object found in AI response')
+    parsed = JSON.parse(match[0])
+  }
+
+  if (Array.isArray(parsed)) return parsed as ExtractedScholarship[]
   if (typeof parsed === 'object' && parsed !== null) {
     const obj = parsed as { scholarships?: unknown; results?: unknown }
-    if (Array.isArray(obj.scholarships)) return obj.scholarships as GeminiScholarship[]
-    if (Array.isArray(obj.results)) return obj.results as GeminiScholarship[]
+    if (Array.isArray(obj.scholarships)) return obj.scholarships as ExtractedScholarship[]
+    if (Array.isArray(obj.results)) return obj.results as ExtractedScholarship[]
   }
   return []
 }
@@ -285,4 +454,48 @@ function asBeninEligibility(value: unknown): BeninEligibility {
 function asNullableBoolean(value: unknown): boolean | null {
   if (typeof value === 'boolean') return value
   return null
+}
+
+function normalizeName(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w && !STOPWORDS.has(w))
+    .join(' ')
+    .trim()
+}
+
+function dedupeScholarships(items: Scholarship[]): Scholarship[] {
+  const byKey = new Map<string, Scholarship>()
+
+  for (const item of items) {
+    const key = `${normalizeName(item.name)}|${(item.country ?? '').toLowerCase()}`
+    const existing = byKey.get(key)
+
+    if (!existing) {
+      byKey.set(key, item)
+      continue
+    }
+
+    byKey.set(key, {
+      ...existing,
+      amount: existing.amount ?? item.amount,
+      deadline: existing.deadline ?? item.deadline,
+      country: existing.country ?? item.country,
+      level: existing.level ?? item.level,
+      coverage: existing.coverage ?? item.coverage,
+      benin_eligible:
+        existing.benin_eligible !== 'unknown' ? existing.benin_eligible : item.benin_eligible,
+      asks_fee: existing.asks_fee ?? item.asks_fee,
+    })
+  }
+
+  return Array.from(byKey.values())
+}
+
+function isExpired(deadline: string | null, today: string): boolean {
+  return deadline !== null && deadline < today
 }
