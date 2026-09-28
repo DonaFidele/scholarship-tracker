@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { Scholarship, Level, Coverage, BeninEligibility } from '@/lib/types'
 
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-3.8-flash'
+
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
@@ -144,7 +146,7 @@ Extraits:
 ${extracts}`
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
