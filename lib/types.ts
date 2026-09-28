@@ -12,11 +12,10 @@ export type Scholarship = {
   country: string | null
   /** May be null when the source URL is unknown. */
   link: string | null
-  /** Omitted by /api/search until that route is extended. */
-  level?: Level | null
-  coverage?: Coverage | null
-  benin_eligible?: BeninEligibility
-  asks_fee?: boolean | null
+  level: Level | null
+  coverage: Coverage | null
+  benin_eligible: BeninEligibility
+  asks_fee: boolean | null
 }
 
 export type ApplicationStatus =
@@ -34,16 +33,16 @@ export type ChecklistItem = {
 }
 
 export type ApplicationInfo = {
-  apply_link?: string | null
+  apply_link: string | null
   /** Format "YYYY-MM-DD" */
-  opens_at?: string | null
+  opens_at: string | null
   /** Format "YYYY-MM-DD" */
-  results_at?: string | null
-  is_favorite?: boolean
-  eligibility_notes?: string | null
-  covered_costs?: string | null
+  results_at: string | null
+  is_favorite: boolean
+  eligibility_notes: string | null
+  covered_costs: string | null
   /** ISO timestamp of the last automatic detail extraction. */
-  details_checked_at?: string | null
+  details_checked_at: string | null
 }
 
 export type Application = Scholarship &
