@@ -1,16 +1,12 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 import { Navbar } from '@/components/navbar'
 import { ApplicationsView } from '@/components/applications/applications-view'
 import { ApplicationDetailSheet } from '@/components/applications/application-detail-sheet'
 import { AddApplicationDialog } from '@/components/applications/add-application-dialog'
-import {
-  getMockApplications,
-  getMockDetailsProposal,
-  isoOffset,
-} from '@/lib/mock-data'
 import type {
   Application,
   ApplicationInfo,
@@ -45,9 +41,21 @@ type DetailsPatch = InfoPatch
 type DetailsState = 'idle' | 'loading' | 'error' | 'ready'
 
 export default function ApplicationsPage() {
-  const [applications, setApplications] = useState<ApplicationWithChecklist[]>(
-    () => getMockApplications(),
-  )
+  const [applications, setApplications] = useState<ApplicationWithChecklist[]>([])
+  const [applicationsCount, setApplicationsCount] = useState(0)
+  const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => {
+    let active = true
+    void supabase.from('applications').select('*, checklist_items(*)').order('deadline', { ascending: true, nullsFirst: false }).then(async ({ data, error }) => {
+      if (!active) return
+      if (error) { toast.error('Impossible de charger tes candidatures.'); return }
+      setApplications((data ?? []).map((row) => ({ ...row, checklist_items: row.checklist_items ?? [] })) as ApplicationWithChecklist[])
+      const { count } = await supabase.from('applications').select('*', { count: 'exact', head: true })
+      if (active) setApplicationsCount(count ?? 0)
+    })
+    return () => { active = false }
+  }, [supabase])
   const [openId, setOpenId] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -56,15 +64,13 @@ export default function ApplicationsPage() {
   const [notesSaveState, setNotesSaveState] = useState<
     'idle' | 'saving' | 'saved'
   >('idle')
-  const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Details extraction flow (mocked).
+  // Details extraction flow.
   const [detailsState, setDetailsState] = useState<DetailsState>('idle')
   const [detailsError, setDetailsError] = useState<string | null>(null)
   const [detailsProposal, setDetailsProposal] =
     useState<ScholarshipDetails | null>(null)
   const [applyingDetails, setApplyingDetails] = useState(false)
-  const detailsTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const selected = useMemo(
     () => applications.find((a) => a.id === openId) ?? null,
@@ -77,20 +83,32 @@ export default function ApplicationsPage() {
   ) =>
     setApplications((prev) => prev.map((a) => (a.id === id ? fn(a) : a)))
 
-  const handleStatusChange = (id: string, status: ApplicationStatus) => {
+  const handleStatusChange = async (id: string, status: ApplicationStatus) => {
+    const previous = applications.find((a) => a.id === id)
+    if (!previous) return
     patch(id, (a) => ({ ...a, status }))
-    toast.success('Statut mis à jour.')
+    const { error } = await supabase.from('applications').update({ status }).eq('id', id)
+    if (error) { patch(id, (a) => ({ ...a, status: previous.status })); toast.error('Impossible de mettre à jour le statut.') }
+    else toast.success('Statut mis à jour.')
   }
 
-  const handleDeadlineChange = (id: string, deadline: string | null) => {
+  const handleDeadlineChange = async (id: string, deadline: string | null) => {
+    const previous = applications.find((a) => a.id === id)
+    if (!previous) return
     patch(id, (a) => ({ ...a, deadline }))
-    toast.success('Deadline mise à jour.')
+    const { error } = await supabase.from('applications').update({ deadline }).eq('id', id)
+    if (error) { patch(id, (a) => ({ ...a, deadline: previous.deadline })); toast.error('Impossible de mettre à jour la deadline.') }
+    else toast.success('Deadline mise à jour.')
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    const previous = applications.find((a) => a.id === id)
+    if (!previous) return
     setApplications((prev) => prev.filter((a) => a.id !== id))
     if (openId === id) setOpenId(null)
-    toast.success('Candidature supprimée.')
+    const { error } = await supabase.from('applications').delete().eq('id', id)
+    if (error) { setApplications((prev) => [...prev, previous].sort((a, b) => (a.deadline ?? '9999').localeCompare(b.deadline ?? '9999'))); toast.error('Impossible de supprimer cette candidature.') }
+    else { setApplicationsCount((count) => Math.max(0, count - 1)); toast.success('Candidature supprimée.') }
   }
 
   const handleToggleItem = (id: string, itemId: string, done: boolean) => {
@@ -139,13 +157,16 @@ export default function ApplicationsPage() {
     }))
   }
 
-  const handleNotesChange = (id: string, notes: string) => {
+  const handleNotesChange = async (id: string, notes: string) => {
+    const previous = applications.find((a) => a.id === id)?.notes ?? null
     patch(id, (a) => ({ ...a, notes }))
     setNotesSaveState('saving')
-    if (notesTimer.current) clearTimeout(notesTimer.current)
-    notesTimer.current = setTimeout(() => {
-      setNotesSaveState('saved')
-    }, 600)
+    const { error } = await supabase.from('applications').update({ notes }).eq('id', id)
+    if (error) {
+      patch(id, (a) => ({ ...a, notes: previous }))
+      setNotesSaveState('idle')
+      toast.error('Impossible d’enregistrer tes notes.')
+    } else setNotesSaveState('saved')
   }
 
   const handleToggleFavorite = (id: string, value: boolean) => {
@@ -159,7 +180,6 @@ export default function ApplicationsPage() {
   }
 
   const resetDetails = () => {
-    if (detailsTimer.current) clearTimeout(detailsTimer.current)
     setDetailsState('idle')
     setDetailsError(null)
     setDetailsProposal(null)
@@ -172,89 +192,40 @@ export default function ApplicationsPage() {
     setDetailsState('loading')
     setDetailsError(null)
     setDetailsProposal(null)
-    if (detailsTimer.current) clearTimeout(detailsTimer.current)
-    detailsTimer.current = setTimeout(() => {
-      if (!app.link && !app.apply_link) {
-        setDetailsState('error')
-        setDetailsError(
-          'Aucun lien disponible pour analyser cette bourse. Ajoute un lien officiel puis réessaie.',
-        )
-        return
-      }
-      setDetailsProposal(getMockDetailsProposal())
-      setDetailsState('ready')
-    }, 1200)
+    setDetailsState('error')
+    setDetailsError('L’analyse automatique des détails n’est pas disponible pour le moment.')
   }
 
-  const handleApplyDetails = (
-    id: string,
-    detailsPatch: DetailsPatch,
-    documentsToAdd: string[],
-  ) => {
-    setApplyingDetails(true)
-    setTimeout(() => {
-      patch(id, (a) => {
-        const maxOrder = a.checklist_items.reduce(
-          (m, it) => Math.max(m, it.sort_order),
-          -1,
-        )
-        const newItems = documentsToAdd.map((label, i) => ({
-          id: uid('item'),
-          label,
-          is_done: false,
-          sort_order: maxOrder + 1 + i,
-        }))
-        return {
-          ...a,
-          ...detailsPatch,
-          details_checked_at: new Date().toISOString(),
-          checklist_items: [...a.checklist_items, ...newItems],
-        }
-      })
-      setApplyingDetails(false)
-      resetDetails()
-      toast.success('Détails appliqués')
-    }, 700)
+  const handleApplyDetails = (_id: string, _detailsPatch: DetailsPatch, _documentsToAdd: string[]) => {
+    setApplyingDetails(false)
+    setDetailsState('error')
+    setDetailsError('Aucun détail analysé à appliquer.')
   }
 
-  const handleAdd = (data: Scholarship & { status: ApplicationStatus }) => {
+  const handleAdd = async (data: Scholarship & { status: ApplicationStatus } & Partial<Pick<ApplicationInfo, 'apply_link' | 'opens_at' | 'results_at'>>) => {
     setAdding(true)
     setAddError(null)
-    // Simulate a short async persist for realistic UX.
-    setTimeout(() => {
-      const newApp: ApplicationWithChecklist = {
-        id: uid('app'),
-        name: data.name,
-        link: data.link,
-        amount: data.amount,
-        country: data.country,
-        deadline: data.deadline,
-        level: data.level,
-        coverage: data.coverage,
-        benin_eligible: data.benin_eligible,
-        asks_fee: data.asks_fee,
-        apply_link: null,
-        opens_at: null,
-        results_at: null,
-        is_favorite: false,
-        eligibility_notes: null,
-        covered_costs: null,
-        details_checked_at: null,
-        status: data.status,
-        notes: '',
-        created_at: new Date().toISOString(),
-        checklist_items: [],
-      }
-      setApplications((prev) => [newApp, ...prev])
-      setAdding(false)
-      setAddOpen(false)
-      toast.success('Bourse ajoutée à ta liste.')
-    }, 400)
+    const { data: inserted, error } = await supabase.from('applications').insert({
+      name: data.name, link: data.link, amount: data.amount, country: data.country,
+      deadline: data.deadline, level: data.level, coverage: data.coverage,
+      benin_eligible: data.benin_eligible, asks_fee: data.asks_fee,
+      status: data.status, apply_link: data.apply_link ?? null,
+      opens_at: data.opens_at ?? null, results_at: data.results_at ?? null,
+    }).select('*, checklist_items(*)').single()
+    setAdding(false)
+    if (error || !inserted) {
+      setAddError('Impossible d’ajouter cette bourse. Réessaie.')
+      return
+    }
+    setApplications((prev) => [...prev, { ...inserted, checklist_items: inserted.checklist_items ?? [] } as ApplicationWithChecklist])
+    setApplicationsCount((count) => count + 1)
+    setAddOpen(false)
+    toast.success('Bourse ajoutée à ta liste.')
   }
 
   return (
     <div className="min-h-svh">
-      <Navbar active="applications" applicationsCount={applications.length} />
+      <Navbar active="applications" applicationsCount={applicationsCount} />
       <main className="mx-auto w-full max-w-5xl px-4 py-8 pb-24 md:pb-8">
         <ApplicationsView
           applications={applications}

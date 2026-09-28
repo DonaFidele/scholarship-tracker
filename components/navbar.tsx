@@ -80,6 +80,11 @@ export function Navbar({
   applicationsCount: number
 }) {
   const router = useRouter()
+  const [accountEmail, setAccountEmail] = useState('')
+  useEffect(() => {
+    const supabase = createClient()
+    void supabase.auth.getUser().then(({ data }) => setAccountEmail(data.user?.email ?? ''))
+  }, [])
 
   return (
     <>
@@ -145,10 +150,10 @@ export function Navbar({
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium text-foreground">
-                      Marie Laurent
+                      {accountEmail ? accountEmail.split('@')[0] : 'Mon compte'}
                     </span>
                     <span className="text-xs font-normal text-muted-foreground">
-                      marie.laurent@email.com
+                      {accountEmail}
                     </span>
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
