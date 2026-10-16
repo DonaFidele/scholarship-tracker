@@ -1,110 +1,11 @@
 'use client'
 
-import { ExternalLink } from 'lucide-react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { ExternalLink, Sparkles } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DeadlineBadge } from '@/components/deadline-badge'
 import { SaveButton } from '@/components/search/save-button'
-import {
-  BeninBadge,
-  CoverageBadge,
-  FeeWarningBadge,
-  LevelBadge,
-} from '@/components/scholarship/metadata-badges'
+import { BeninBadge, CoverageBadge, FeeWarningBadge, LevelBadge } from '@/components/scholarship/metadata-badges'
 import { formatDateFr } from '@/lib/format'
-import type { Scholarship } from '@/lib/types'
+import type { RankedResult } from '@/lib/types'
 
-export function ResultTable({
-  results,
-  savedLinks,
-  savingLink,
-  onSave,
-}: {
-  results: Scholarship[]
-  savedLinks: string[]
-  savingLink: string | null
-  onSave: (scholarship: Scholarship) => void
-}) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-border">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/40 hover:bg-muted/40">
-            <TableHead className="w-[36%]">Bourse</TableHead>
-            <TableHead>Montant</TableHead>
-            <TableHead>Deadline</TableHead>
-            <TableHead>Pays</TableHead>
-            <TableHead>Bénin</TableHead>
-            <TableHead className="text-right">Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {results.map((s) => (
-            <TableRow key={s.link ?? s.name}>
-              <TableCell className="whitespace-normal">
-                <div className="flex flex-col gap-1.5">
-                  {s.link ? (
-                    <a
-                      href={s.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex w-fit items-center gap-1.5 font-medium hover:text-primary hover:underline"
-                    >
-                      {s.name}
-                      <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
-                    </a>
-                  ) : (
-                    <span className="font-medium">{s.name}</span>
-                  )}
-                  {(s.level || s.coverage || s.asks_fee === true) && (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <LevelBadge value={s.level} />
-                      <CoverageBadge value={s.coverage} />
-                      <FeeWarningBadge show={s.asks_fee} />
-                    </div>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell className="whitespace-normal text-muted-foreground">
-                {s.amount ?? '—'}
-              </TableCell>
-              <TableCell>
-                {s.deadline ? (
-                  <span className="flex items-center gap-2">
-                    <span className="text-muted-foreground">
-                      {formatDateFr(s.deadline)}
-                    </span>
-                    <DeadlineBadge deadline={s.deadline} />
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">Non précisée</span>
-                )}
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {s.country ?? '—'}
-              </TableCell>
-              <TableCell>
-                {s.benin_eligible && s.benin_eligible !== 'unknown' && (
-                  <BeninBadge value={s.benin_eligible} />
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                <SaveButton
-                  saved={savedLinks.includes(s.link ?? s.name)}
-                  saving={savingLink === (s.link ?? s.name)}
-                  onClick={() => onSave(s)}
-                />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
-}
+export function ResultTable({ results, savedLinks, savingLink, onSave }: { results: RankedResult[]; savedLinks: string[]; savingLink: string | null; onSave: (scholarship: RankedResult) => void }) { return <div className="overflow-hidden rounded-xl border border-border"><Table><TableHeader><TableRow className="bg-muted/40 hover:bg-muted/40"><TableHead className="w-[36%]">Bourse</TableHead><TableHead>Montant</TableHead><TableHead>Deadline</TableHead><TableHead>Pays</TableHead><TableHead>Bénin</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader><TableBody>{results.map((s) => { const rec = s.recommendation?.recommended; return <TableRow key={s.link ?? s.name} className={rec ? 'border-l-2 border-l-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20' : undefined}><TableCell className="whitespace-normal"><div className="flex flex-col gap-1.5">{s.link ? <a href={s.link} target="_blank" rel="noopener noreferrer" className="inline-flex w-fit items-center gap-1.5 font-medium hover:text-primary hover:underline">{s.name}<ExternalLink className="size-3.5 text-muted-foreground" /></a> : <span className="font-medium">{s.name}</span>}{rec && <div className="flex flex-wrap items-center gap-2"><span className="inline-flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 text-xs text-white"><Sparkles className="size-3" />Recommandé pour toi</span><span className="text-xs text-muted-foreground">{s.recommendation?.reasons.slice(0, 4).join(' · ')}</span></div>}<div className="flex flex-wrap gap-1.5"><LevelBadge value={s.level} /><CoverageBadge value={s.coverage} /><FeeWarningBadge show={s.asks_fee} /></div></div></TableCell><TableCell>{s.amount ?? '—'}</TableCell><TableCell>{s.deadline ? <span className="flex items-center gap-2"><span className="text-muted-foreground">{formatDateFr(s.deadline)}</span><DeadlineBadge deadline={s.deadline} /></span> : 'Non précisée'}</TableCell><TableCell>{s.country ?? '—'}</TableCell><TableCell>{s.benin_eligible !== 'unknown' && <BeninBadge value={s.benin_eligible} />}</TableCell><TableCell className="text-right"><SaveButton saved={savedLinks.includes(s.link ?? s.name)} saving={savingLink === (s.link ?? s.name)} onClick={() => onSave(s)} /></TableCell></TableRow> })}</TableBody></Table></div> }

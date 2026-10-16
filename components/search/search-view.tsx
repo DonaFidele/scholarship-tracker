@@ -1,240 +1,28 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { AlertCircle, SearchX, Sparkles } from 'lucide-react'
+import { AlertCircle, SearchX, Sparkles, X } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '@/components/ui/empty'
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { SearchBar } from '@/components/search/search-bar'
 import { ResultTable } from '@/components/search/result-table'
 import { ResultCards } from '@/components/search/result-cards'
-import {
-  ResultFilters,
-  type CoverageFilter,
-  type LevelFilter,
-} from '@/components/search/result-filters'
+import { ResultFilters, type CoverageFilter, type LevelFilter } from '@/components/search/result-filters'
 import { ScamNotice } from '@/components/scholarship/scam-notice'
-import type { Scholarship, SearchStatus } from '@/lib/types'
+import type { RankedResult, SearchStatus } from '@/lib/types'
 
-const chips = [
-  'Master en ingénierie au Canada',
-  'Bourses pour étudiants internationaux en France',
-  'Doctorat entièrement financé en Europe',
-]
+const chips = ['Master en ingénierie au Canada', 'Bourses pour étudiants internationaux en France', 'Doctorat entièrement financé en Europe']
+function ResultsSkeleton() { return <div className="flex flex-col gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="flex items-center gap-4 rounded-xl border p-4"><div className="flex flex-1 flex-col gap-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/3" /></div><Skeleton className="h-9 w-28 rounded-md" /></div>)}</div> }
 
-function ResultsSkeleton() {
-  return (
-    <div className="flex flex-col gap-3">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div
-          key={i}
-          className="flex items-center gap-4 rounded-xl border border-border p-4"
-        >
-          <div className="flex flex-1 flex-col gap-2">
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-3 w-1/3" />
-          </div>
-          <Skeleton className="h-9 w-28 rounded-md" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-export function SearchView({
-  results,
-  status,
-  savedLinks,
-  savingLink,
-  onSearch,
-  onSave,
-}: {
-  results: Scholarship[]
-  status: SearchStatus
-  savedLinks: string[]
-  savingLink: string | null
-  onSearch: (query: string) => void
-  onSave: (scholarship: Scholarship) => void
-}) {
-  const [query, setQuery] = useState('')
-  const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
-  const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>('all')
-  const [hideClosedBenin, setHideClosedBenin] = useState(false)
-
-  const runChip = (chip: string) => {
-    setQuery(chip)
-    onSearch(chip)
-  }
-
-  const resetFilters = () => {
-    setLevelFilter('all')
-    setCoverageFilter('all')
-    setHideClosedBenin(false)
-  }
-
-  const filteredResults = useMemo(
-    () =>
-      results.filter((s) => {
-        if (levelFilter !== 'all' && s.level !== levelFilter) return false
-        if (coverageFilter !== 'all' && s.coverage !== coverageFilter)
-          return false
-        if (hideClosedBenin && s.benin_eligible === 'no') return false
-        return true
-      }),
-    [results, levelFilter, coverageFilter, hideClosedBenin],
-  )
-
-  return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-balance">
-          Trouve ta prochaine bourse
-        </h1>
-        <p className="text-muted-foreground text-pretty">
-          Décris le financement que tu cherches. On fait remonter les bourses
-          qui correspondent, avec leurs deadlines.
-        </p>
-      </header>
-
-      <div className="flex flex-col gap-3">
-        <SearchBar
-          value={query}
-          onChange={setQuery}
-          onSubmit={() => onSearch(query)}
-          disabled={status === 'loading'}
-        />
-        <div className="flex flex-wrap gap-2">
-          {chips.map((chip) => (
-            <Button
-              key={chip}
-              variant="outline"
-              size="sm"
-              className="h-8 rounded-full text-muted-foreground"
-              disabled={status === 'loading'}
-              onClick={() => runChip(chip)}
-            >
-              {chip}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {status !== 'loading' && <ScamNotice />}
-
-      {status === 'loading' && <ResultsSkeleton />}
-
-      {status === 'error' && (
-        <Alert variant="destructive">
-          <AlertCircle />
-          <AlertTitle>La recherche a échoué</AlertTitle>
-          <AlertDescription>
-            Une erreur est survenue. Réessaie dans un instant.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {status === 'success' && results.length === 0 && (
-        <Empty className="rounded-xl border border-dashed border-border">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <SearchX />
-            </EmptyMedia>
-            <EmptyTitle>Aucune bourse trouvée</EmptyTitle>
-            <EmptyDescription>
-              Essaie d’élargir ta recherche ou de reformuler ta demande.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      )}
-
-      {status === 'success' && results.length > 0 && (
-        <div className="flex flex-col gap-4">
-          <ResultFilters
-            level={levelFilter}
-            coverage={coverageFilter}
-            hideClosedBenin={hideClosedBenin}
-            onLevelChange={setLevelFilter}
-            onCoverageChange={setCoverageFilter}
-            onHideClosedBeninChange={setHideClosedBenin}
-          />
-
-          {filteredResults.length === 0 ? (
-            <Empty className="rounded-xl border border-dashed border-border">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <SearchX />
-                </EmptyMedia>
-                <EmptyTitle>Aucun résultat avec ces filtres</EmptyTitle>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button variant="outline" onClick={resetFilters}>
-                  Réinitialiser les filtres
-                </Button>
-              </EmptyContent>
-            </Empty>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <div className="hidden md:block">
-                <ResultTable
-                  results={filteredResults}
-                  savedLinks={savedLinks}
-                  savingLink={savingLink}
-                  onSave={onSave}
-                />
-              </div>
-              <div className="md:hidden">
-                <ResultCards
-                  results={filteredResults}
-                  savedLinks={savedLinks}
-                  savingLink={savingLink}
-                  onSave={onSave}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Résultats générés automatiquement. Vérifie toujours les montants
-                et les dates limites sur le site officiel de chaque bourse.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {status === 'idle' && (
-        <Empty className="rounded-xl border border-dashed border-border">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Sparkles />
-            </EmptyMedia>
-            <EmptyTitle>Lance une recherche</EmptyTitle>
-            <EmptyDescription>
-              Saisis une requête ci-dessus ou choisis un exemple pour commencer.
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <div className="flex flex-wrap justify-center gap-2">
-              {chips.map((chip) => (
-                <Button
-                  key={chip}
-                  variant="outline"
-                  size="sm"
-                  className="h-8 rounded-full"
-                  onClick={() => runChip(chip)}
-                >
-                  {chip}
-                </Button>
-              ))}
-            </div>
-          </EmptyContent>
-        </Empty>
-      )}
-    </div>
-  )
+export function SearchView({ results, profileComplete, status, savedLinks, savingLink, onSearch, onSave }: { results: RankedResult[]; profileComplete: boolean; status: SearchStatus; savedLinks: string[]; savingLink: string | null; onSearch: (query: string) => void; onSave: (scholarship: RankedResult) => void }) {
+  const [query, setQuery] = useState(''); const [levelFilter, setLevelFilter] = useState<LevelFilter>('all'); const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>('all'); const [hideClosedBenin, setHideClosedBenin] = useState(false); const [recommendFirst, setRecommendFirst] = useState(true); const [showProfileNotice, setShowProfileNotice] = useState(true)
+  const filteredResults = useMemo(() => results.filter((s) => (levelFilter === 'all' || s.level === levelFilter) && (coverageFilter === 'all' || s.coverage === coverageFilter) && (!hideClosedBenin || s.benin_eligible !== 'no')), [results, levelFilter, coverageFilter, hideClosedBenin])
+  const recommended = filteredResults.filter((s) => s.recommendation?.recommended).sort((a, b) => (b.recommendation?.score ?? 0) - (a.recommendation?.score ?? 0)); const others = filteredResults.filter((s) => !s.recommendation?.recommended)
+  const list = (items: RankedResult[]) => <><div className="hidden md:block"><ResultTable results={items} savedLinks={savedLinks} savingLink={savingLink} onSave={onSave} /></div><div className="md:hidden"><ResultCards results={items} savedLinks={savedLinks} savingLink={savingLink} onSave={onSave} /></div></>
+  const resetFilters = () => { setLevelFilter('all'); setCoverageFilter('all'); setHideClosedBenin(false) }
+  const runChip = (chip: string) => { setQuery(chip); onSearch(chip) }
+  return <div className="flex flex-col gap-6"><header className="flex flex-col gap-2"><h1 className="text-2xl font-semibold tracking-tight">Trouve ta prochaine bourse</h1><p className="text-muted-foreground">Décris le financement que tu cherches. On fait remonter les bourses qui correspondent, avec leurs deadlines.</p></header><div className="flex flex-col gap-3"><SearchBar value={query} onChange={setQuery} onSubmit={() => onSearch(query)} disabled={status === 'loading'} /><div className="flex flex-wrap gap-2">{chips.map((chip) => <Button key={chip} variant="outline" size="sm" className="h-8 rounded-full text-muted-foreground" onClick={() => runChip(chip)}>{chip}</Button>)}</div></div>{!profileComplete && showProfileNotice && <div className="flex items-start gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm dark:border-indigo-900 dark:bg-indigo-950/30"><Sparkles className="mt-0.5 size-4 text-indigo-600" /><div className="flex-1"><p>Complète ton profil pour voir des bourses recommandées pour toi.</p><Button variant="link" className="h-auto px-0" nativeButton={false} render={<a href="/profile" />}>Compléter mon profil</Button></div><Button variant="ghost" size="icon-sm" aria-label="Fermer" onClick={() => setShowProfileNotice(false)}><X /></Button></div>}{status !== 'loading' && <ScamNotice />}{status === 'loading' && <ResultsSkeleton />}{status === 'error' && <Alert variant="destructive"><AlertCircle /><AlertTitle>La recherche a échoué</AlertTitle><AlertDescription>Une erreur est survenue. Réessaie dans un instant.</AlertDescription></Alert>}{status === 'success' && results.length === 0 && <Empty className="rounded-xl border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><SearchX /></EmptyMedia><EmptyTitle>Aucune bourse trouvée</EmptyTitle><EmptyDescription>Essaie d’élargir ta recherche ou de reformuler ta demande.</EmptyDescription></EmptyHeader></Empty>}{status === 'success' && results.length > 0 && <div className="flex flex-col gap-4"><div className="flex flex-wrap items-center justify-between gap-3"><ResultFilters level={levelFilter} coverage={coverageFilter} hideClosedBenin={hideClosedBenin} onLevelChange={setLevelFilter} onCoverageChange={setCoverageFilter} onHideClosedBeninChange={setHideClosedBenin} />{recommended.length > 0 && <label className="flex items-center gap-2 text-sm"><Switch checked={recommendFirst} onCheckedChange={setRecommendFirst} />Recommandées d&apos;abord</label>}</div>{filteredResults.length === 0 ? <Empty className="rounded-xl border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><SearchX /></EmptyMedia><EmptyTitle>Aucun résultat avec ces filtres</EmptyTitle></EmptyHeader><EmptyContent><Button variant="outline" onClick={resetFilters}>Réinitialiser les filtres</Button></EmptyContent></Empty> : recommendFirst && recommended.length > 0 ? <div className="flex flex-col gap-4"><h2 className="flex items-center gap-2 text-lg font-semibold"><Sparkles className="size-4 text-indigo-600" />Recommandées pour toi <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{recommended.length}</span></h2>{list(recommended)}{others.length > 0 && <><h2 className="text-lg font-semibold">Autres résultats</h2>{list(others)}</>}</div> : list(filteredResults)}<p className="text-xs text-muted-foreground">Résultats générés automatiquement. Vérifie toujours les montants et les dates limites sur le site officiel de chaque bourse.</p></div>}{status === 'idle' && <Empty className="rounded-xl border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><Sparkles /></EmptyMedia><EmptyTitle>Lance une recherche</EmptyTitle><EmptyDescription>Saisis une requête ci-dessus ou choisis un exemple pour commencer.</EmptyDescription></EmptyHeader><EmptyContent><div className="flex flex-wrap justify-center gap-2">{chips.map((chip) => <Button key={chip} variant="outline" size="sm" className="h-8 rounded-full" onClick={() => runChip(chip)}>{chip}</Button>)}</div></EmptyContent></Empty>}</div>
 }
