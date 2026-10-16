@@ -12,7 +12,10 @@ import type { UserSettings } from '@/lib/types'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(
+    () => (typeof window === 'undefined' ? null : createClient()),
+    [],
+  )
   const [userId, setUserId] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_USER_SETTINGS)

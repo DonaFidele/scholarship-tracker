@@ -43,9 +43,13 @@ type DetailsState = 'idle' | 'loading' | 'error' | 'ready'
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<ApplicationWithChecklist[]>([])
   const [applicationsCount, setApplicationsCount] = useState(0)
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(
+    () => (typeof window === 'undefined' ? null : createClient()),
+    [],
+  )
 
   useEffect(() => {
+    if (!supabase) return
     let active = true
     void supabase.from('applications').select('*, checklist_items(*)').order('deadline', { ascending: true, nullsFirst: false }).then(async ({ data, error }) => {
       if (!active) return

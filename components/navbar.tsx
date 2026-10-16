@@ -13,6 +13,7 @@ import {
   Search,
   Settings as SettingsIcon,
   Sun,
+  User,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,7 +33,7 @@ import {
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
-type ActivePage = 'search' | 'applications' | 'settings'
+type ActivePage = 'search' | 'applications' | 'settings' | 'profile'
 
 const links: {
   key: ActivePage
@@ -152,6 +153,10 @@ export function Navbar({
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
+                  <DropdownMenuItem render={<Link href="/profile" />}>
+                    <User />
+                    Mon profil
+                  </DropdownMenuItem>
                   <DropdownMenuItem render={<Link href="/settings" />}>
                     <SettingsIcon />
                     Paramètres
