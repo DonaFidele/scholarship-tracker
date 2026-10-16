@@ -10,7 +10,7 @@ export function ChipGroup({ options, value, onChange, multiple = false, columns 
   return <div className={cn('flex flex-wrap gap-2', columns && 'grid grid-cols-2')}>{options.map((option) => { const item = typeof option === 'string' ? { value: option, label: option } : option; const selected = values.includes(item.value); return <button type="button" key={item.value} aria-pressed={selected} onClick={() => { if (multiple) onChange(selected ? values.filter((v) => v !== item.value) : [...values, item.value]); else onChange(item.value) }} className={cn('flex min-h-11 items-center justify-center gap-2 rounded-full border px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background hover:bg-muted')}>{selected && <Check className="size-4" />}{item.label}</button> })}</div>
 }
 
-export function ProfileFormFields({ profile, onChange, compact = false }: { profile: Profile; onChange: (profile: Profile) => void; compact?: boolean }) {
+export function ProfileFormFields({ profile, onChange }: { profile: Profile; onChange: (profile: Profile) => void }) {
  const set = (patch: Partial<Profile>) => onChange({ ...profile, ...patch })
  return <div className="flex flex-col gap-6">
   <section className="flex flex-col gap-2"><Label>Niveau actuel</Label><ChipGroup options={CURRENT_LEVELS} value={profile.current_level} onChange={(v) => set({ current_level: v as Profile['current_level'] })} /></section>
