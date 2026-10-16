@@ -14,9 +14,13 @@ export default function SearchPage() {
   const [savingLink, setSavingLink] = useState<string | null>(null)
   const [applicationsCount, setApplicationsCount] = useState(0)
   const requestId = useRef(0)
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(
+    () => (typeof window === 'undefined' ? null : createClient()),
+    [],
+  )
 
   useEffect(() => {
+    if (!supabase) return
     let active = true
     const load = async () => {
       const { data, error, count } = await supabase.from('applications').select('link', { count: 'exact' })
