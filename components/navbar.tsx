@@ -12,6 +12,7 @@ import {
   Moon,
   Search,
   Settings as SettingsIcon,
+  Sparkles,
   Sun,
   User,
 } from 'lucide-react'
@@ -33,7 +34,7 @@ import {
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
-type ActivePage = 'search' | 'applications' | 'settings' | 'profile'
+type ActivePage = 'search' | 'for-you' | 'applications' | 'settings' | 'profile'
 
 const links: {
   key: ActivePage
@@ -42,6 +43,7 @@ const links: {
   icon: typeof Search
 }[] = [
   { key: 'search', href: '/search', label: 'Recherche', icon: Search },
+  { key: 'for-you', href: '/for-you', label: 'Pour toi', icon: Sparkles },
   {
     key: 'applications',
     href: '/applications',
@@ -194,7 +196,7 @@ export function Navbar({
       </header>
 
       {/* Mobile bottom tab bar */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-border bg-background/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-border bg-background/95 backdrop-blur md:hidden">
         {links.map((link) => {
           const Icon = link.icon
           const isActive = active === link.key

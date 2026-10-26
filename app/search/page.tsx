@@ -57,7 +57,7 @@ export default function SearchPage() {
   }
 
   const rankedResults = useMemo<RankedResult[]>(
-    () => results.map((result) => ({ ...result, fields: [], recommendation: null })),
+    () => results.map((result) => ({ ...result, fields: [], source: 'community', last_checked_at: null, recommendation: null })),
     [results],
   )
 
