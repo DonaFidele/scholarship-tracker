@@ -1,0 +1,19 @@
+import type { Profile, RankedResult } from './types'
+
+export const MOCK_PROFILE: Profile = {
+  current_level: 'master_1',
+  target_level: 'master',
+  field: 'finance',
+  destinations: ['Canada', 'France'],
+  languages: ['francais', 'anglais'],
+  tests: ['ielts'],
+}
+
+export const MOCK_RANKED_RESULTS: RankedResult[] = [
+  { name: 'Bourse d’excellence Vanier en finance', amount: '50 000 CAD / an', deadline: '2027-02-15', country: 'Canada', link: 'https://example.org/vanier', level: 'master', coverage: 'full', benin_eligible: 'yes', asks_fee: false, fields: ['finance', 'economie'], recommendation: { recommended: true, score: 92, reasons: ['Master', 'Finance', 'Canada', 'Couverture complète'] } },
+  { name: 'Eiffel Excellence Scholarship', amount: '1 181 EUR / mois', deadline: '2027-01-10', country: 'France', link: 'https://example.org/eiffel', level: 'master', coverage: 'partial', benin_eligible: 'yes', asks_fee: false, fields: ['gestion', 'finance', 'droit_sciences_po'], recommendation: { recommended: true, score: 85, reasons: ['Master', 'France', 'Francophone'] } },
+  { name: 'Bourse Lester B. Pearson', amount: 'Frais complets', deadline: '2026-12-01', country: 'Canada', link: 'https://example.org/pearson', level: 'licence', coverage: 'full', benin_eligible: 'unknown', asks_fee: false, fields: ['economie'], recommendation: { recommended: true, score: 64, reasons: ['Canada', 'IELTS accepté'] } },
+  { name: 'DAAD Study Scholarship', amount: '934 EUR / mois', deadline: '2026-11-30', country: 'Allemagne', link: 'https://example.org/daad', level: 'master', coverage: 'partial', benin_eligible: 'yes', asks_fee: false, fields: ['ingenierie'], recommendation: { recommended: false, score: 38, reasons: [] } },
+  { name: 'Chevening Scholarships', amount: 'Frais complets', deadline: '2027-03-05', country: 'Royaume-Uni', link: 'https://example.org/chevening', level: 'master', coverage: 'full', benin_eligible: 'no', asks_fee: false, fields: ['gestion'], recommendation: { recommended: false, score: 30, reasons: [] } },
+  { name: 'Programme de bourses de doctorat Fulbright', amount: null, deadline: null, country: 'États-Unis', link: 'https://example.org/fulbright', level: 'doctorat', coverage: null, benin_eligible: 'unknown', asks_fee: true, fields: ['sante'], recommendation: null },
+]

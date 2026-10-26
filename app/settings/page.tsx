@@ -22,6 +22,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [applicationsCount, setApplicationsCount] = useState(0)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -77,6 +79,15 @@ export default function SettingsPage() {
     }
   }, [userId])
 
+  const handleDeleteAccount = () => {
+    setDeleteError(null)
+    setDeleting(true)
+    setTimeout(() => {
+      setDeleting(false)
+      toast.success('Compte supprimé')
+    }, 800)
+  }
+
   const handleSignOut = async () => {
     if (!supabase) {
       toast.error('La connexion est indisponible. Réessaie.')
@@ -103,7 +114,7 @@ export default function SettingsPage() {
             <Skeleton className="h-36 w-full rounded-xl" />
           </div>
         ) : (
-          <SettingsView key={`${settings.email_reminders}-${settings.reminder_days.join(',')}`} settings={settings} email={email} saving={saving} onSave={handleSave} onSignOut={handleSignOut} />
+          <SettingsView key={`${settings.email_reminders}-${settings.reminder_days.join(',')}`} settings={settings} email={email} saving={saving} onSave={handleSave} onSignOut={handleSignOut} onDeleteAccount={handleDeleteAccount} deleting={deleting} deleteError={deleteError} />
         )}
       </main>
     </div>

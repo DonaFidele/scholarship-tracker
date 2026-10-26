@@ -14,15 +14,17 @@ import {
 } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SearchBar } from '@/components/search/search-bar'
-import { ResultTable } from '@/components/search/result-table'
-import { ResultCards } from '@/components/search/result-cards'
+import { ResultGroup } from '@/components/search/result-group'
+import { ProfilePrompt } from '@/components/search/profile-prompt'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   ResultFilters,
   type CoverageFilter,
   type LevelFilter,
 } from '@/components/search/result-filters'
 import { ScamNotice } from '@/components/scholarship/scam-notice'
-import type { Scholarship, SearchStatus } from '@/lib/types'
+import type { RankedResult, Scholarship, SearchStatus } from '@/lib/types'
 
 const chips = [
   'Master en ingénierie au Canada',
@@ -51,13 +53,15 @@ function ResultsSkeleton() {
 
 export function SearchView({
   results,
+  profileComplete,
   status,
   savedLinks,
   savingLink,
   onSearch,
   onSave,
 }: {
-  results: Scholarship[]
+  results: RankedResult[]
+  profileComplete: boolean
   status: SearchStatus
   savedLinks: string[]
   savingLink: string | null
@@ -68,6 +72,8 @@ export function SearchView({
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
   const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>('all')
   const [hideClosedBenin, setHideClosedBenin] = useState(false)
+  const [recommendedFirst, setRecommendedFirst] = useState(true)
+  const [promptDismissed, setPromptDismissed] = useState(false)
 
   const runChip = (chip: string) => {
     setQuery(chip)
@@ -90,6 +96,18 @@ export function SearchView({
         return true
       }),
     [results, levelFilter, coverageFilter, hideClosedBenin],
+  )
+
+  const recommendedResults = useMemo(
+    () =>
+      filteredResults
+        .filter((s) => s.recommendation?.recommended)
+        .sort((a, b) => (b.recommendation?.score ?? 0) - (a.recommendation?.score ?? 0)),
+    [filteredResults],
+  )
+  const otherResults = useMemo(
+    () => filteredResults.filter((s) => !s.recommendation?.recommended),
+    [filteredResults],
   )
 
   return (
@@ -127,6 +145,10 @@ export function SearchView({
         </div>
       </div>
 
+      {!profileComplete && !promptDismissed && (
+        <ProfilePrompt onDismiss={() => setPromptDismissed(true)} />
+      )}
+
       {status !== 'loading' && <ScamNotice />}
 
       {status === 'loading' && <ResultsSkeleton />}
@@ -157,6 +179,10 @@ export function SearchView({
 
       {status === 'success' && results.length > 0 && (
         <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <Switch id="recommended-first" checked={recommendedFirst} onCheckedChange={setRecommendedFirst} />
+            <Label htmlFor="recommended-first" className="cursor-pointer">Recommandées d&apos;abord</Label>
+          </div>
           <ResultFilters
             level={levelFilter}
             coverage={coverageFilter}
@@ -182,22 +208,32 @@ export function SearchView({
             </Empty>
           ) : (
             <div className="flex flex-col gap-3">
-              <div className="hidden md:block">
-                <ResultTable
+              {recommendedFirst ? (
+                <>
+                  <ResultGroup
+                    title="Recommandées pour toi"
+                    icon={<Sparkles className="size-5 text-primary" aria-hidden="true" />}
+                    results={recommendedResults}
+                    savedLinks={savedLinks}
+                    savingLink={savingLink}
+                    onSave={onSave}
+                  />
+                  <ResultGroup
+                    title={recommendedResults.length > 0 ? 'Autres résultats' : undefined}
+                    results={otherResults}
+                    savedLinks={savedLinks}
+                    savingLink={savingLink}
+                    onSave={onSave}
+                  />
+                </>
+              ) : (
+                <ResultGroup
                   results={filteredResults}
                   savedLinks={savedLinks}
                   savingLink={savingLink}
                   onSave={onSave}
                 />
-              </div>
-              <div className="md:hidden">
-                <ResultCards
-                  results={filteredResults}
-                  savedLinks={savedLinks}
-                  savingLink={savingLink}
-                  onSave={onSave}
-                />
-              </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Résultats générés automatiquement. Vérifie toujours les montants
                 et les dates limites sur le site officiel de chaque bourse.

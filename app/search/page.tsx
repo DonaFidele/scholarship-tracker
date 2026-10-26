@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Navbar } from '@/components/navbar'
 import { SearchView } from '@/components/search/search-view'
 import { createClient } from '@/lib/supabase/client'
-import type { Scholarship, SearchStatus } from '@/lib/types'
+import type { RankedResult, Scholarship, SearchStatus } from '@/lib/types'
 
 export default function SearchPage() {
   const [status, setStatus] = useState<SearchStatus>('idle')
@@ -56,6 +56,11 @@ export default function SearchPage() {
     }
   }
 
+  const rankedResults = useMemo<RankedResult[]>(
+    () => results.map((result) => ({ ...result, fields: [], recommendation: null })),
+    [results],
+  )
+
   const handleSave = async (scholarship: Scholarship) => {
     const key = scholarship.link
     if (!key) { toast.error('Cette bourse ne possède pas de lien à sauvegarder.'); return }
@@ -88,7 +93,7 @@ export default function SearchPage() {
     <div className="min-h-svh">
       <Navbar active="search" applicationsCount={applicationsCount} />
       <main className="mx-auto w-full max-w-5xl px-4 py-8 pb-24 md:pb-8">
-        <SearchView results={results} status={status} savedLinks={savedLinks} savingLink={savingLink} onSearch={handleSearch} onSave={handleSave} />
+        <SearchView results={rankedResults} profileComplete={false} status={status} savedLinks={savedLinks} savingLink={savingLink} onSearch={handleSearch} onSave={handleSave} />
       </main>
     </div>
   )

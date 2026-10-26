@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
+import { DangerZone } from '@/components/settings/danger-zone'
 
 const reminderOptions = [
   { days: 7, label: '7 jours avant' },
@@ -22,12 +23,18 @@ export function SettingsView({
   saving,
   onSave,
   onSignOut,
+  onDeleteAccount,
+  deleting,
+  deleteError,
 }: {
   settings: UserSettings
   email: string
   saving: boolean
   onSave: (settings: UserSettings) => void
   onSignOut: () => void
+  onDeleteAccount: () => void
+  deleting: boolean
+  deleteError: string | null
 }) {
   const [draft, setDraft] = useState<UserSettings>(settings)
 
@@ -85,6 +92,8 @@ export function SettingsView({
           </Button>
         </CardContent>
       </Card>
+
+      <DangerZone onDeleteAccount={onDeleteAccount} deleting={deleting} deleteError={deleteError} />
 
       <div className="sticky bottom-0 z-30 -mx-4 mt-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:flex md:justify-end md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
         <Button disabled={!changed || saving} onClick={() => onSave({ ...draft, reminder_days: [...draft.reminder_days] })}>
