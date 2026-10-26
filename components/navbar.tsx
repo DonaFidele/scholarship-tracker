@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { cn } from 'cn'
 import {
+  Compass,
   GraduationCap,
   LayoutList,
   LogOut,
+  MessageCircleHeart,
   Moon,
   Search,
   Settings as SettingsIcon,
@@ -34,7 +36,14 @@ import {
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
-type ActivePage = 'search' | 'for-you' | 'applications' | 'settings' | 'profile'
+type ActivePage =
+  | 'search'
+  | 'for-you'
+  | 'prepare'
+  | 'lea'
+  | 'applications'
+  | 'settings'
+  | 'profile'
 
 const links: {
   key: ActivePage
@@ -44,6 +53,8 @@ const links: {
 }[] = [
   { key: 'search', href: '/search', label: 'Recherche', icon: Search },
   { key: 'for-you', href: '/for-you', label: 'Pour toi', icon: Sparkles },
+  { key: 'prepare', href: '/prepare-toi', label: 'Se préparer', icon: Compass },
+  { key: 'lea', href: '/lea', label: 'Léa', icon: MessageCircleHeart },
   {
     key: 'applications',
     href: '/applications',
@@ -196,7 +207,9 @@ export function Navbar({
       </header>
 
       {/* Mobile bottom tab bar */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-border bg-background/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid border-t border-border bg-background/95 backdrop-blur md:hidden"
+        style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }}
+      >
         {links.map((link) => {
           const Icon = link.icon
           const isActive = active === link.key
@@ -205,7 +218,7 @@ export function Navbar({
               key={link.key}
               href={link.href}
               className={cn(
-                'relative flex flex-col items-center justify-center gap-1 py-2.5 text-xs font-medium transition-colors',
+                'relative flex flex-col items-center justify-center gap-1 px-0.5 py-2.5 text-center text-xs leading-tight font-medium transition-colors',
                 isActive ? 'text-primary' : 'text-muted-foreground',
               )}
             >

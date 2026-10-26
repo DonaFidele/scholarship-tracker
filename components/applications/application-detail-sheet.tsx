@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { cn } from 'cn'
 import {
   ExternalLink,
@@ -45,6 +46,7 @@ import { StatusSelect } from '@/components/applications/status-select'
 import { FavoriteToggle } from '@/components/applications/favorite-toggle'
 import { DetailsProposalCard } from '@/components/applications/details-proposal-card'
 import { dossierCounts } from '@/components/applications/dossier-progress'
+import { ValuedCriteria } from '@/components/applications/valued-criteria'
 import { MetadataBadges } from '@/components/scholarship/metadata-badges'
 import { formatDateFr } from '@/lib/format'
 import type {
@@ -213,6 +215,20 @@ export function ApplicationDetailSheet({
             asksFee={app.asks_fee}
             className="mt-1"
           />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto w-fit justify-start py-1.5 text-left whitespace-normal text-primary"
+            nativeButton={false}
+            render={
+              <Link
+                href={`/lea?q=${encodeURIComponent(`Comment me préparer pour ${app.name} ?`)}`}
+              />
+            }
+          >
+            <Sparkles data-icon="inline-start" />
+            Demander à Léa comment me préparer pour celle-ci
+          </Button>
           {app.link && (
             <a
               href={app.link}
@@ -571,6 +587,10 @@ export function ApplicationDetailSheet({
               </Button>
             </div>
           </section>
+
+          <ValuedCriteria
+            criteria={app.valued_criteria ?? detailsProposal?.valued_criteria}
+          />
 
           {/* Notes */}
           <section className="flex flex-col gap-1.5">
