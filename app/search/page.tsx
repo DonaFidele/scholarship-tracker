@@ -61,6 +61,12 @@ export default function SearchPage() {
     if (!key) { toast.error('Cette bourse ne possède pas de lien à sauvegarder.'); return }
     if (savedLinks.includes(key)) { toast.info('Déjà dans tes candidatures'); return }
     setSavingLink(key)
+    if (!supabase) {
+      setSavingLink(null)
+      toast.error('La sauvegarde est temporairement indisponible.')
+      return
+    }
+
     const { error } = await supabase.from('applications').insert({
       name: scholarship.name, link: scholarship.link, amount: scholarship.amount,
       country: scholarship.country, deadline: scholarship.deadline,
