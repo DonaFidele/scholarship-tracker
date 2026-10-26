@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { cn } from 'cn'
 import {
+  Compass,
   GraduationCap,
   LayoutList,
   LogOut,
@@ -34,7 +35,13 @@ import {
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
-type ActivePage = 'search' | 'for-you' | 'applications' | 'settings' | 'profile'
+type ActivePage =
+  | 'search'
+  | 'for-you'
+  | 'prepare'
+  | 'applications'
+  | 'settings'
+  | 'profile'
 
 const links: {
   key: ActivePage
@@ -44,6 +51,7 @@ const links: {
 }[] = [
   { key: 'search', href: '/search', label: 'Recherche', icon: Search },
   { key: 'for-you', href: '/for-you', label: 'Pour toi', icon: Sparkles },
+  { key: 'prepare', href: '/prepare-toi', label: 'Se préparer', icon: Compass },
   {
     key: 'applications',
     href: '/applications',

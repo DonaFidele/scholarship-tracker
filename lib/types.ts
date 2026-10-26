@@ -57,12 +57,45 @@ export type ApplicationInfo = {
   details_checked_at: string | null
 }
 
+export type OpportunityType =
+  | 'leadership'
+  | 'volontariat'
+  | 'mentorat'
+  | 'stage'
+  | 'fellowship'
+  | 'competition'
+
+export type OpportunityMode = 'en_ligne' | 'presentiel' | 'hybride'
+
+export type OpportunityCost = 'gratuit' | 'payant'
+
+export type Opportunity = {
+  id: string
+  name: string
+  type: OpportunityType
+  description: string
+  duration: string | null
+  mode: OpportunityMode
+  country: string | null
+  cost: OpportunityCost | null
+  link: string | null
+  what_it_brings: string
+  source: CatalogSource
+}
+
+export type OpportunitySuggestion = Pick<
+  Opportunity,
+  'name' | 'type' | 'description' | 'link' | 'duration' | 'mode' | 'cost'
+>
+
 export type Application = Scholarship &
   ApplicationInfo & {
     id: string
     status: ApplicationStatus
     notes: string | null
     created_at: string
+    /** Criteria this scholarship values; absent until the data is available. */
+    valued_criteria?: OpportunityType[] | null
   }
 
 export type ApplicationWithChecklist = Application & {
@@ -84,6 +117,7 @@ export type ScholarshipDetails = {
   eligibility_summary: string | null
   covered_costs: string | null
   required_documents: string[]
+  valued_criteria?: OpportunityType[] | null
 }
 
 export type UserSettings = {

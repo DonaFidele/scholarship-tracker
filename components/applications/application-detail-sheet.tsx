@@ -45,6 +45,7 @@ import { StatusSelect } from '@/components/applications/status-select'
 import { FavoriteToggle } from '@/components/applications/favorite-toggle'
 import { DetailsProposalCard } from '@/components/applications/details-proposal-card'
 import { dossierCounts } from '@/components/applications/dossier-progress'
+import { ValuedCriteria } from '@/components/applications/valued-criteria'
 import { MetadataBadges } from '@/components/scholarship/metadata-badges'
 import { formatDateFr } from '@/lib/format'
 import type {
@@ -571,6 +572,10 @@ export function ApplicationDetailSheet({
               </Button>
             </div>
           </section>
+
+          <ValuedCriteria
+            criteria={app.valued_criteria ?? detailsProposal?.valued_criteria}
+          />
 
           {/* Notes */}
           <section className="flex flex-col gap-1.5">
