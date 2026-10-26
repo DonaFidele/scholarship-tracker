@@ -77,7 +77,11 @@ export function Navbar({
   const [accountEmail, setAccountEmail] = useState('')
   useEffect(() => {
     const supabase = createClient()
-    void supabase.auth.getUser().then(({ data }) => setAccountEmail(data.user?.email ?? ''))
+    if (!supabase) return
+
+    void supabase.auth
+      .getUser()
+      .then(({ data }) => setAccountEmail(data.user?.email ?? ''))
   }, [])
 
   return (
@@ -165,6 +169,11 @@ export function Navbar({
                     variant="destructive"
                     onClick={async () => {
                       const supabase = createClient()
+                      if (!supabase) {
+                        toast.error('Service de compte indisponible. Réessaie.')
+                        return
+                      }
+
                       const { error } = await supabase.auth.signOut()
                       if (error) {
                         toast.error('Impossible de se déconnecter. Réessaie.')
