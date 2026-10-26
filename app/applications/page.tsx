@@ -91,6 +91,10 @@ export default function ApplicationsPage() {
     const previous = applications.find((a) => a.id === id)
     if (!previous) return
     patch(id, (a) => ({ ...a, status }))
+    if (!supabase) {
+      toast.error('Service de sauvegarde indisponible.')
+      return
+    }
     const { error } = await supabase.from('applications').update({ status }).eq('id', id)
     if (error) { patch(id, (a) => ({ ...a, status: previous.status })); toast.error('Impossible de mettre à jour le statut.') }
     else toast.success('Statut mis à jour.')
@@ -100,6 +104,10 @@ export default function ApplicationsPage() {
     const previous = applications.find((a) => a.id === id)
     if (!previous) return
     patch(id, (a) => ({ ...a, deadline }))
+    if (!supabase) {
+      toast.error('Service de sauvegarde indisponible.')
+      return
+    }
     const { error } = await supabase.from('applications').update({ deadline }).eq('id', id)
     if (error) { patch(id, (a) => ({ ...a, deadline: previous.deadline })); toast.error('Impossible de mettre à jour la deadline.') }
     else toast.success('Deadline mise à jour.')
@@ -110,6 +118,10 @@ export default function ApplicationsPage() {
     if (!previous) return
     setApplications((prev) => prev.filter((a) => a.id !== id))
     if (openId === id) setOpenId(null)
+    if (!supabase) {
+      toast.error('Service de sauvegarde indisponible.')
+      return
+    }
     const { error } = await supabase.from('applications').delete().eq('id', id)
     if (error) { setApplications((prev) => [...prev, previous].sort((a, b) => (a.deadline ?? '9999').localeCompare(b.deadline ?? '9999'))); toast.error('Impossible de supprimer cette candidature.') }
     else { setApplicationsCount((count) => Math.max(0, count - 1)); toast.success('Candidature supprimée.') }
@@ -165,6 +177,11 @@ export default function ApplicationsPage() {
     const previous = applications.find((a) => a.id === id)?.notes ?? null
     patch(id, (a) => ({ ...a, notes }))
     setNotesSaveState('saving')
+    if (!supabase) {
+      setNotesSaveState('idle')
+      toast.error('Service de sauvegarde indisponible.')
+      return
+    }
     const { error } = await supabase.from('applications').update({ notes }).eq('id', id)
     if (error) {
       patch(id, (a) => ({ ...a, notes: previous }))
@@ -209,6 +226,11 @@ export default function ApplicationsPage() {
   const handleAdd = async (data: Scholarship & { status: ApplicationStatus } & Partial<Pick<ApplicationInfo, 'apply_link' | 'opens_at' | 'results_at'>>) => {
     setAdding(true)
     setAddError(null)
+    if (!supabase) {
+      setAdding(false)
+      setAddError('Service de sauvegarde indisponible. Réessaie plus tard.')
+      return
+    }
     const { data: inserted, error } = await supabase.from('applications').insert({
       name: data.name, link: data.link, amount: data.amount, country: data.country,
       deadline: data.deadline, level: data.level, coverage: data.coverage,

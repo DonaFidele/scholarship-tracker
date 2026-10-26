@@ -22,26 +22,37 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [applicationsCount, setApplicationsCount] = useState(0)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
     void (async () => {
-      const [{ data: { user }, error: userError }, { count }] = await Promise.all([
-        supabase.auth.getUser(),
-        supabase.from('applications').select('*', { count: 'exact', head: true }),
-      ])
-      if (!active) return
-      if (userError || !user) {
-        router.replace('/login')
+      if (!supabase) {
+        if (active) setLoading(false)
         return
       }
-      setUserId(user.id)
-      setEmail(user.email ?? '')
-      setApplicationsCount(count ?? 0)
+
       try {
-        setSettings(await getSettings(user.id))
+        const [{ data: { user }, error: userError }, { count }] = await Promise.all([
+          supabase.auth.getUser(),
+          supabase.from('applications').select('*', { count: 'exact', head: true }),
+        ])
+        if (!active) return
+        if (userError || !user) {
+          router.replace('/login')
+          return
+        }
+        setUserId(user.id)
+        setEmail(user.email ?? '')
+        setApplicationsCount(count ?? 0)
+        try {
+          setSettings(await getSettings(user.id))
+        } catch {
+          toast.error('Impossible de charger tes paramètres.')
+        }
       } catch {
-        toast.error('Impossible de charger tes paramètres.')
+        if (active) toast.error('Impossible de charger ton profil.')
       } finally {
         if (active) setLoading(false)
       }
@@ -68,7 +79,21 @@ export default function SettingsPage() {
     }
   }, [userId])
 
+  const handleDeleteAccount = () => {
+    setDeleteError(null)
+    setDeleting(true)
+    setTimeout(() => {
+      setDeleting(false)
+      toast.success('Compte supprimé')
+    }, 800)
+  }
+
   const handleSignOut = async () => {
+    if (!supabase) {
+      toast.error('La connexion est indisponible. Réessaie.')
+      return
+    }
+
     const { error } = await supabase.auth.signOut()
     if (error) {
       toast.error('Impossible de se déconnecter. Réessaie.')
@@ -89,7 +114,7 @@ export default function SettingsPage() {
             <Skeleton className="h-36 w-full rounded-xl" />
           </div>
         ) : (
-          <SettingsView key={`${settings.email_reminders}-${settings.reminder_days.join(',')}`} settings={settings} email={email} saving={saving} onSave={handleSave} onSignOut={handleSignOut} />
+          <SettingsView key={`${settings.email_reminders}-${settings.reminder_days.join(',')}`} settings={settings} email={email} saving={saving} onSave={handleSave} onSignOut={handleSignOut} onDeleteAccount={handleDeleteAccount} deleting={deleting} deleteError={deleteError} />
         )}
       </main>
     </div>

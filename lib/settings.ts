@@ -8,6 +8,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
 
 export async function getSettings(userId: string): Promise<UserSettings> {
   const supabase = createClient()
+  if (!supabase) return DEFAULT_USER_SETTINGS
   const { data, error } = await supabase
     .from('user_settings')
     .select('email_reminders, reminder_days')
@@ -28,6 +29,7 @@ export async function saveSettings(
   settings: UserSettings,
 ): Promise<void> {
   const supabase = createClient()
+  if (!supabase) return
   const { error } = await supabase.from('user_settings').upsert(
     {
       user_id: userId,

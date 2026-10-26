@@ -46,6 +46,13 @@ export default function LoginPage() {
     setGoogleLoading(true)
     setError(null)
     const supabase = createClient()
+    if (!supabase) {
+      const message = 'Le service de connexion est indisponible. Réessaie plus tard.'
+      setGoogleLoading(false)
+      setError(message)
+      toast.error(message)
+      return
+    }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -68,6 +75,13 @@ export default function LoginPage() {
     setError(null)
     setLinkLoading(true)
     const supabase = createClient()
+    if (!supabase) {
+      const message = 'Le service de connexion est indisponible. Réessaie plus tard.'
+      setLinkLoading(false)
+      setError(message)
+      toast.error(message)
+      return
+    }
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: trimmed,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },

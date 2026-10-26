@@ -18,7 +18,8 @@ import {
   LevelBadge,
 } from '@/components/scholarship/metadata-badges'
 import { formatDateFr } from '@/lib/format'
-import type { Scholarship } from '@/lib/types'
+import { RecommendationNote } from '@/components/search/recommendation-note'
+import type { RankedResult, Scholarship } from '@/lib/types'
 
 export function ResultTable({
   results,
@@ -26,7 +27,7 @@ export function ResultTable({
   savingLink,
   onSave,
 }: {
-  results: Scholarship[]
+  results: RankedResult[]
   savedLinks: string[]
   savingLink: string | null
   onSave: (scholarship: Scholarship) => void
@@ -46,8 +47,8 @@ export function ResultTable({
         </TableHeader>
         <TableBody>
           {results.map((s) => (
-            <TableRow key={s.link ?? s.name}>
-              <TableCell className="whitespace-normal">
+            <TableRow key={s.link ?? s.name} className={s.recommendation?.recommended ? 'bg-primary/10 hover:bg-primary/15' : undefined}>
+              <TableCell className={s.recommendation?.recommended ? 'whitespace-normal shadow-[inset_2px_0_0_var(--primary)]' : 'whitespace-normal'}>
                 <div className="flex flex-col gap-1.5">
                   {s.link ? (
                     <a
@@ -69,6 +70,7 @@ export function ResultTable({
                       <FeeWarningBadge show={s.asks_fee} />
                     </div>
                   )}
+                  <RecommendationNote recommendation={s.recommendation} />
                 </div>
               </TableCell>
               <TableCell className="whitespace-normal text-muted-foreground">

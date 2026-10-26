@@ -3,7 +3,13 @@ export type CurrentLevel = 'licence_1' | 'licence_2' | 'licence_3' | 'master_1' 
 export type FieldKey = 'economie' | 'finance' | 'gestion' | 'comptabilite_audit' | 'marketing_commerce' | 'statistiques_data' | 'informatique' | 'droit_sciences_po' | 'sante' | 'ingenierie' | 'agriculture_environnement' | 'lettres_sciences_humaines' | 'autre'
 export type Profile = { current_level: CurrentLevel | null; target_level: Level | null; field: FieldKey | null; destinations: string[]; languages: ('francais' | 'anglais')[]; tests: ('ielts' | 'toefl' | 'tcf_delf' | 'gre_gmat')[] }
 export type Recommendation = { recommended: boolean; score: number; reasons: string[] }
-export type SearchResult = Scholarship & { fields: string[] }
+export type CatalogSource = 'curated' | 'community'
+export type SearchResult = Scholarship & {
+  fields: string[]
+  source: CatalogSource
+  /** ISO date of the last catalog verification. */
+  last_checked_at: string | null
+}
 export type RankedResult = SearchResult & { recommendation: Recommendation | null }
 
 export type Coverage = 'full' | 'partial'

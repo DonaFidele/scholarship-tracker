@@ -11,7 +11,8 @@ import {
   LevelBadge,
 } from '@/components/scholarship/metadata-badges'
 import { formatDateFr } from '@/lib/format'
-import type { Scholarship } from '@/lib/types'
+import { RecommendationNote } from '@/components/search/recommendation-note'
+import type { RankedResult, Scholarship } from '@/lib/types'
 
 export function ResultCards({
   results,
@@ -19,7 +20,7 @@ export function ResultCards({
   savingLink,
   onSave,
 }: {
-  results: Scholarship[]
+  results: RankedResult[]
   savedLinks: string[]
   savingLink: string | null
   onSave: (scholarship: Scholarship) => void
@@ -27,8 +28,9 @@ export function ResultCards({
   return (
     <div className="flex flex-col gap-3">
       {results.map((s) => (
-        <Card key={s.link ?? s.name}>
+        <Card key={s.link ?? s.name} className={s.recommendation?.recommended ? 'border-l-2 border-l-primary bg-primary/10' : undefined}>
           <CardContent className="flex flex-col gap-3">
+            <RecommendationNote recommendation={s.recommendation} />
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-pretty font-medium leading-snug">{s.name}</h3>
               <DeadlineBadge deadline={s.deadline} className="mt-0.5 shrink-0" />
