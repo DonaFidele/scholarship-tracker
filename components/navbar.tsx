@@ -10,6 +10,7 @@ import {
   GraduationCap,
   LayoutList,
   LogOut,
+  MessageCircleHeart,
   Moon,
   Search,
   Settings as SettingsIcon,
@@ -39,6 +40,7 @@ type ActivePage =
   | 'search'
   | 'for-you'
   | 'prepare'
+  | 'lea'
   | 'applications'
   | 'settings'
   | 'profile'
@@ -52,6 +54,7 @@ const links: {
   { key: 'search', href: '/search', label: 'Recherche', icon: Search },
   { key: 'for-you', href: '/for-you', label: 'Pour toi', icon: Sparkles },
   { key: 'prepare', href: '/prepare-toi', label: 'Se préparer', icon: Compass },
+  { key: 'lea', href: '/lea', label: 'Léa', icon: MessageCircleHeart },
   {
     key: 'applications',
     href: '/applications',
@@ -215,7 +218,7 @@ export function Navbar({
               key={link.key}
               href={link.href}
               className={cn(
-                'relative flex flex-col items-center justify-center gap-1 py-2.5 text-xs font-medium transition-colors',
+                'relative flex flex-col items-center justify-center gap-1 px-0.5 py-2.5 text-center text-xs leading-tight font-medium transition-colors',
                 isActive ? 'text-primary' : 'text-muted-foreground',
               )}
             >

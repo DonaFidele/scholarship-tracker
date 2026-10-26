@@ -3,16 +3,24 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { SourceTag } from '@/components/for-you/source-tag'
+import { LeaRecommendsBadge } from '@/components/opportunities/lea-recommends-badge'
 import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-type-badge'
 import { costLabels, modeLabels } from '@/lib/opportunity-labels'
 import type { Opportunity } from '@/lib/types'
 
-export function OpportunityCard({ opportunity: o }: { opportunity: Opportunity }) {
+export function OpportunityCard({
+  opportunity: o,
+  recommendedByLea = false,
+}: {
+  opportunity: Opportunity
+  recommendedByLea?: boolean
+}) {
   return (
     <li>
       <Card className="h-full">
         <CardContent className="flex h-full flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
+            {recommendedByLea && <LeaRecommendsBadge />}
             <OpportunityTypeBadge type={o.type} />
             <SourceTag source={o.source} />
             {o.cost && (

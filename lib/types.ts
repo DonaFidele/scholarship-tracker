@@ -129,3 +129,32 @@ export type UserSettings = {
 export type SearchStatus = 'idle' | 'loading' | 'error' | 'success'
 
 export type DetailsState = 'idle' | 'loading' | 'error' | 'ready'
+
+export type MilestoneStatus = 'a_faire' | 'en_cours' | 'fait'
+
+export type PlanMilestone = {
+  id: string
+  title: string
+  semester_label: string
+  status: MilestoneStatus
+  related_field: FieldKey | null
+}
+
+export type LeaPlan = {
+  id: string
+  target_title: string
+  horizon_semesters: number
+  milestones: PlanMilestone[]
+}
+
+export type LeaMessageRole = 'user' | 'lea'
+
+export type LeaMessage = {
+  id: string
+  role: LeaMessageRole
+  content: string
+  /** ISO timestamp. */
+  created_at: string
+}
+
+export type LeaChatState = 'idle' | 'sending' | 'error'

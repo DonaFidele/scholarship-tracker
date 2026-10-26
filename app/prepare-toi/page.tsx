@@ -12,6 +12,7 @@ export default function PrepareToiPage() {
       <main className="mx-auto w-full max-w-5xl px-4 py-8 pb-24 md:pb-8">
         <PrepareView
           opportunities={MOCK_OPPORTUNITIES}
+          leaRecommendedIds={['opp-aspire-leadership', 'opp-kectil-mentorship']}
           onSuggest={() =>
             toast.success('Merci ! Ta suggestion sera vérifiée avant publication.')
           }

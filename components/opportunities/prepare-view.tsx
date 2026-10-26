@@ -23,9 +23,11 @@ import type { Opportunity, OpportunitySuggestion } from '@/lib/types'
 
 export function PrepareView({
   opportunities,
+  leaRecommendedIds = [],
   onSuggest,
 }: {
   opportunities: Opportunity[]
+  leaRecommendedIds?: string[]
   onSuggest: (data: OpportunitySuggestion) => void
 }) {
   const [type, setType] = useState<OpportunityTypeFilter>('all')
@@ -109,7 +111,11 @@ export function PrepareView({
           </p>
           <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {filtered.map((o) => (
-              <OpportunityCard key={o.id} opportunity={o} />
+              <OpportunityCard
+                key={o.id}
+                opportunity={o}
+                recommendedByLea={leaRecommendedIds.includes(o.id)}
+              />
             ))}
           </ul>
         </>

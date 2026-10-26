@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { cn } from 'cn'
 import {
   ExternalLink,
@@ -214,6 +215,20 @@ export function ApplicationDetailSheet({
             asksFee={app.asks_fee}
             className="mt-1"
           />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto w-fit justify-start py-1.5 text-left whitespace-normal text-primary"
+            nativeButton={false}
+            render={
+              <Link
+                href={`/lea?q=${encodeURIComponent(`Comment me préparer pour ${app.name} ?`)}`}
+              />
+            }
+          >
+            <Sparkles data-icon="inline-start" />
+            Demander à Léa comment me préparer pour celle-ci
+          </Button>
           {app.link && (
             <a
               href={app.link}
