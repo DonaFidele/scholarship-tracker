@@ -26,6 +26,11 @@ export default function SettingsPage() {
   useEffect(() => {
     let active = true
     void (async () => {
+      if (!supabase) {
+        if (active) setLoading(false)
+        return
+      }
+
       const [{ data: { user }, error: userError }, { count }] = await Promise.all([
         supabase.auth.getUser(),
         supabase.from('applications').select('*', { count: 'exact', head: true }),
@@ -69,6 +74,11 @@ export default function SettingsPage() {
   }, [userId])
 
   const handleSignOut = async () => {
+    if (!supabase) {
+      toast.error('La connexion est indisponible. Réessaie.')
+      return
+    }
+
     const { error } = await supabase.auth.signOut()
     if (error) {
       toast.error('Impossible de se déconnecter. Réessaie.')
