@@ -31,22 +31,26 @@ export default function SettingsPage() {
         return
       }
 
-      const [{ data: { user }, error: userError }, { count }] = await Promise.all([
-        supabase.auth.getUser(),
-        supabase.from('applications').select('*', { count: 'exact', head: true }),
-      ])
-      if (!active) return
-      if (userError || !user) {
-        router.replace('/login')
-        return
-      }
-      setUserId(user.id)
-      setEmail(user.email ?? '')
-      setApplicationsCount(count ?? 0)
       try {
-        setSettings(await getSettings(user.id))
+        const [{ data: { user }, error: userError }, { count }] = await Promise.all([
+          supabase.auth.getUser(),
+          supabase.from('applications').select('*', { count: 'exact', head: true }),
+        ])
+        if (!active) return
+        if (userError || !user) {
+          router.replace('/login')
+          return
+        }
+        setUserId(user.id)
+        setEmail(user.email ?? '')
+        setApplicationsCount(count ?? 0)
+        try {
+          setSettings(await getSettings(user.id))
+        } catch {
+          toast.error('Impossible de charger tes paramètres.')
+        }
       } catch {
-        toast.error('Impossible de charger tes paramètres.')
+        if (active) toast.error('Impossible de charger ton profil.')
       } finally {
         if (active) setLoading(false)
       }
