@@ -8,12 +8,7 @@ import {
   getMockLeaMessages,
   getMockLeaPlan,
 } from '@/lib/mock-data'
-import {
-  addMilestone,
-  changeStatus,
-  deleteMilestone,
-  editMilestone,
-} from '@/lib/plan-actions'
+import { changeStatus, type PlanUpdater } from '@/lib/plan-actions'
 import type {
   LeaChatState,
   LeaMessage,
@@ -41,7 +36,6 @@ export function LeaPageClient({
   const [chatState, setChatState] = useState<LeaChatState>('idle')
   const [creatingPlan, setCreatingPlan] = useState(false)
   const [pipelineOpen, setPipelineOpen] = useState(false)
-  const [adjusting, setAdjusting] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const draftVariant = useRef(0)
 
@@ -97,7 +91,6 @@ export function LeaPageClient({
 
   const handleValidatePlan = () => {
     setPlan((prev) => (prev ? { ...prev, stage: 'validated' } : prev))
-    setAdjusting(false)
     appendLea(
       'Ton parcours est validé. Je te suivrai étape par étape, et on pourra l’ajuster quand tu veux.',
     )
@@ -126,39 +119,8 @@ export function LeaPageClient({
     setPlan((prev) => (prev ? changeStatus(prev, id, status, reason ?? null) : prev))
   }
 
-  const handleEdit = (
-    id: string,
-    newTitle: string,
-    semesterLabel: string,
-    semesterIndex: number,
-    reason?: string | null,
-  ) => {
-    setPlan((prev) =>
-      prev
-        ? editMilestone(
-            prev,
-            id,
-            newTitle,
-            semesterLabel,
-            semesterIndex,
-            reason ?? null,
-          )
-        : prev,
-    )
-  }
-
-  const handleDelete = (id: string) => {
-    setPlan((prev) => (prev ? deleteMilestone(prev, id) : prev))
-  }
-
-  const handleAdd = (
-    title: string,
-    semesterLabel: string,
-    semesterIndex: number,
-  ) => {
-    setPlan((prev) =>
-      prev ? addMilestone(prev, title, semesterLabel, semesterIndex) : prev,
-    )
+  const handlePlanUpdate = (updater: PlanUpdater) => {
+    setPlan((prev) => (prev ? updater(prev) : prev))
   }
 
   const handleCompleted = (milestone: PlanMilestone) => {
@@ -178,18 +140,14 @@ export function LeaPageClient({
           creatingPlan={creatingPlan}
           prefillQuery={prefillQuery}
           pipelineOpen={pipelineOpen}
-          adjusting={adjusting}
           onPipelineOpenChange={setPipelineOpen}
-          onToggleAdjustMode={() => setAdjusting((v) => !v)}
           onCreatePlan={handleCreatePlan}
           onSendMessage={handleSend}
           onRetryLastMessage={reply}
           onValidatePlan={handleValidatePlan}
           onRequestNewProposal={handleRequestNewProposal}
           onMilestoneStatusChange={handleStatusChange}
-          onMilestoneEdit={handleEdit}
-          onMilestoneDelete={handleDelete}
-          onMilestoneAdd={handleAdd}
+          onPlanUpdate={handlePlanUpdate}
           onMilestoneCompleted={handleCompleted}
         />
       </main>

@@ -9,16 +9,17 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { MilestoneAddForm } from '@/components/lea/milestone-add-form'
 import { PlanDraftBanner } from '@/components/lea/plan-draft-banner'
 import { PlanGlobalHistory } from '@/components/lea/plan-global-history'
 import { PlanValidatedBar } from '@/components/lea/plan-validated-bar'
 import { SemesterGroup } from '@/components/lea/semester-group'
 import {
-  groupBySemester,
+  MAX_OBJECTIVES_PER_SEMESTER,
+  buildSemesters,
+  emptySemesters,
   planCounts,
-  semesterOptions,
 } from '@/lib/milestone-helpers'
+import type { PlanUpdater } from '@/lib/plan-actions'
 import type { LeaPlan, MilestoneStatus, PlanMilestone } from '@/lib/types'
 
 type Tab = 'parcours' | 'historique'
@@ -27,21 +28,15 @@ export function PlanPipelineSheet({
   plan,
   open,
   onOpenChange,
-  adjusting,
-  onToggleAdjustMode,
   onValidatePlan,
   onRequestNewProposal,
   onMilestoneStatusChange,
-  onMilestoneEdit,
-  onMilestoneDelete,
-  onMilestoneAdd,
+  onPlanUpdate,
   onMilestoneCompleted,
 }: {
   plan: LeaPlan
   open: boolean
   onOpenChange: (open: boolean) => void
-  adjusting: boolean
-  onToggleAdjustMode: () => void
   onValidatePlan: () => void
   onRequestNewProposal: (reason: string | null) => void
   onMilestoneStatusChange: (
@@ -49,34 +44,37 @@ export function PlanPipelineSheet({
     status: MilestoneStatus,
     reason?: string | null,
   ) => void
-  onMilestoneEdit: (
-    id: string,
-    newTitle: string,
-    semesterLabel: string,
-    semesterIndex: number,
-    reason?: string | null,
-  ) => void
-  onMilestoneDelete: (id: string) => void
-  onMilestoneAdd: (
-    title: string,
-    semesterLabel: string,
-    semesterIndex: number,
-  ) => void
+  onPlanUpdate: (updater: PlanUpdater) => void
   onMilestoneCompleted: (milestone: PlanMilestone) => void
 }) {
   const [tab, setTab] = useState<Tab>('parcours')
-  const [closedGroups, setClosedGroups] = useState<Set<number>>(new Set())
+  const [closedGroups, setClosedGroups] = useState<Set<number>>(
+    () =>
+      new Set(
+        buildSemesters(plan)
+          .filter(
+            (g) =>
+              g.milestones.length > 0 &&
+              g.milestones.every((m) => m.status === 'fait' || m.status === 'rate'),
+          )
+          .map((g) => g.index),
+      ),
+  )
   const [pendingJump, setPendingJump] = useState<string | null>(null)
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
 
   const isDraft = plan.stage === 'draft'
-  const editing = isDraft || adjusting
-  const canTrack = !isDraft && !adjusting
   const counts = planCounts(plan)
-  const groups = useMemo(() => groupBySemester(plan.milestones), [plan.milestones])
-  const semesterItems = useMemo(
-    () => semesterOptions(plan.horizon_semesters, plan.current_semester_index),
-    [plan.horizon_semesters, plan.current_semester_index],
+  const groups = useMemo(() => buildSemesters(plan), [plan])
+  const missing = useMemo(() => emptySemesters(plan), [plan])
+  const semesterTargets = useMemo(
+    () =>
+      groups.map((g) => ({
+        index: g.index,
+        label: g.label,
+        full: g.milestones.length >= MAX_OBJECTIVES_PER_SEMESTER,
+      })),
+    [groups],
   )
 
   const jumpToMilestone = (id: string) => {
@@ -144,12 +142,13 @@ export function PlanPipelineSheet({
                   Parcours
                 </TabsTrigger>
                 <TabsTrigger value="historique" className="px-3">
-                  Historique global
+                  Historique
                 </TabsTrigger>
               </TabsList>
             </div>
             {isDraft ? (
               <PlanDraftBanner
+                missingSemesters={missing}
                 onValidatePlan={onValidatePlan}
                 onRequestNewProposal={onRequestNewProposal}
               />
@@ -158,18 +157,11 @@ export function PlanPipelineSheet({
                 done={counts.done}
                 total={counts.total}
                 percent={counts.percent}
-                adjusting={adjusting}
-                onToggleAdjustMode={onToggleAdjustMode}
               />
             )}
           </SheetHeader>
 
-          <TabsContent value="parcours" className="flex flex-col gap-5 p-4">
-            {groups.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                Aucune étape pour l’instant.
-              </p>
-            ) : null}
+          <TabsContent value="parcours" className="flex flex-col gap-3 p-4">
             {groups.map((group) => (
               <SemesterGroup
                 key={group.index}
@@ -184,22 +176,13 @@ export function PlanPipelineSheet({
                     return copy
                   })
                 }
-                editing={editing}
-                canTrack={canTrack}
+                isDraft={isDraft}
                 highlightedId={highlightedId}
-                semesterItems={semesterItems}
+                semesterTargets={semesterTargets}
                 onStatusChange={handleStatusChange}
-                onEdit={onMilestoneEdit}
-                onDelete={onMilestoneDelete}
+                onUpdate={onPlanUpdate}
               />
             ))}
-            {editing ? (
-              <MilestoneAddForm
-                semesterItems={semesterItems}
-                defaultSemesterIndex={plan.current_semester_index}
-                onAdd={onMilestoneAdd}
-              />
-            ) : null}
           </TabsContent>
 
           <TabsContent value="historique" className="p-4">

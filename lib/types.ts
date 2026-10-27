@@ -138,6 +138,13 @@ export type MilestoneEventType =
   | 'marquee_en_cours'
   | 'marquee_faite'
   | 'marquee_ratee'
+  | 'remise_a_faire'
+
+export type SubGoal = {
+  id: string
+  title: string
+  done: boolean
+}
 
 export type MilestoneEvent = {
   id: string
@@ -163,6 +170,7 @@ export type PlanMilestone = {
   related_field: FieldKey | null
   added_after_validation: boolean
   events: MilestoneEvent[]
+  sub_goals: SubGoal[]
 }
 
 export type PlanStage = 'draft' | 'validated'

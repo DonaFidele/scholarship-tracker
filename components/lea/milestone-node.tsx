@@ -1,79 +1,114 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { cn } from 'cn'
-import { Check, ClockAlert, Ellipsis, History, X } from 'lucide-react'
+import {
+  ArrowRightLeft,
+  Check,
+  ClockAlert,
+  Ellipsis,
+  History,
+  ListPlus,
+  Pencil,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MilestoneEditRow } from '@/components/lea/milestone-edit-row'
 import { MilestoneHistoryStack } from '@/components/lea/milestone-history-stack'
 import { MilestoneRatePrompt } from '@/components/lea/milestone-rate-prompt'
+import { MilestoneStatusMenu } from '@/components/lea/milestone-status-menu'
+import { SubGoalList } from '@/components/lea/sub-goal-list'
 import { formatDateFr } from '@/lib/format'
-import { addedAt, isLate, statusLabels } from '@/lib/milestone-helpers'
+import { addedAt, isLate } from '@/lib/milestone-helpers'
+import {
+  deleteMilestone,
+  editMilestone,
+  type PlanUpdater,
+} from '@/lib/plan-actions'
 import type { MilestoneStatus, PlanMilestone } from '@/lib/types'
 
 const circleStyles: Record<MilestoneStatus, string> = {
   fait: 'bg-emerald-500 text-background',
   en_cours: 'bg-indigo-500 text-background',
   a_faire: 'border-2 border-muted-foreground/50 bg-background',
-  rate: 'bg-muted-foreground text-background',
+  rate: 'bg-amber-500 text-background',
 }
 
-function capitalize(text: string) {
-  return text.charAt(0).toUpperCase() + text.slice(1)
-}
+export type SemesterTarget = { index: number; label: string; full: boolean }
 
 export function MilestoneNode({
   milestone,
   currentSemesterIndex,
   isLast,
-  editing,
-  canTrack,
+  isDraft,
   highlighted,
-  semesterItems,
+  canDelete,
+  moveTargets,
   onStatusChange,
-  onEdit,
-  onDelete,
+  onUpdate,
 }: {
   milestone: PlanMilestone
   currentSemesterIndex: number
   isLast: boolean
-  editing: boolean
-  canTrack: boolean
+  isDraft: boolean
   highlighted: boolean
-  semesterItems: { value: string; label: string }[]
+  canDelete: boolean
+  moveTargets: SemesterTarget[]
   onStatusChange: (
     id: string,
     status: MilestoneStatus,
     reason?: string | null,
   ) => void
-  onEdit: (
-    id: string,
-    newTitle: string,
-    semesterLabel: string,
-    semesterIndex: number,
-    reason?: string | null,
-  ) => void
-  onDelete: (id: string) => void
+  onUpdate: (updater: PlanUpdater) => void
 }) {
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [title, setTitle] = useState(milestone.title)
+  const [addingSubGoal, setAddingSubGoal] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [rateOpen, setRateOpen] = useState(false)
-  const historyId = useId()
 
   const { status } = milestone
-  const late = isLate(milestone, currentSemesterIndex)
+  const late = !isDraft && isLate(milestone, currentSemesterIndex)
   const created = addedAt(milestone)
+
+  const commitTitle = () => {
+    const trimmed = title.trim()
+    if (trimmed && trimmed !== milestone.title) {
+      onUpdate((plan) =>
+        editMilestone(plan, milestone.id, trimmed, milestone.semester_index, null),
+      )
+    } else {
+      setTitle(milestone.title)
+    }
+    setEditingTitle(false)
+  }
+
+  const handleStatusSelect = (next: MilestoneStatus) => {
+    if (next === status) return
+    if (next === 'rate') {
+      setRateOpen(true)
+      return
+    }
+    setRateOpen(false)
+    onStatusChange(milestone.id, next)
+  }
 
   return (
     <li
       id={`milestone-${milestone.id}`}
-      className={cn('relative flex scroll-mt-24 gap-3', !isLast && 'pb-5')}
+      className={cn('relative flex scroll-mt-24 gap-3', !isLast && 'pb-6')}
     >
       {!isLast ? (
         <span
@@ -85,47 +120,20 @@ export function MilestoneNode({
         />
       ) : null}
 
-      <button
-        type="button"
-        aria-expanded={historyOpen}
-        aria-controls={historyId}
-        aria-label={`${milestone.semester_label}, ${milestone.title}, statut : ${statusLabels[status]}${late ? ', en retard' : ''}`}
-        onClick={() => setHistoryOpen((v) => !v)}
+      <span
+        aria-hidden="true"
         className={cn(
-          'relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+          'relative z-10 mt-1 flex size-6 shrink-0 items-center justify-center rounded-full',
           circleStyles[status],
-          late &&
-            'ring-2 ring-amber-500 ring-offset-2 ring-offset-background',
-          late && status === 'a_faire' && 'border-amber-500',
+          late && 'ring-2 ring-amber-500 ring-offset-2 ring-offset-background',
         )}
       >
         {status === 'en_cours' ? (
-          <>
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 animate-ping rounded-full bg-indigo-500/50 motion-reduce:animate-none"
-            />
-            <span
-              aria-hidden="true"
-              className="relative size-2 rounded-full bg-background"
-            />
-          </>
+          <span className="size-2 rounded-full bg-background" />
         ) : null}
-        {status === 'fait' ? (
-          <Check aria-hidden="true" className="size-3.5" />
-        ) : null}
-        {status === 'rate' ? (
-          <X aria-hidden="true" className="size-3.5" />
-        ) : null}
-        {late ? (
-          <span
-            aria-hidden="true"
-            className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-amber-500 text-background"
-          >
-            <ClockAlert className="size-2.5" />
-          </span>
-        ) : null}
-      </button>
+        {status === 'fait' ? <Check className="size-3.5" /> : null}
+        {status === 'rate' ? <X className="size-3.5" /> : null}
+      </span>
 
       <div
         className={cn(
@@ -133,104 +141,143 @@ export function MilestoneNode({
           highlighted && 'bg-accent ring-4 ring-accent',
         )}
       >
-        {editing ? (
-          <MilestoneEditRow
-            milestone={milestone}
-            semesterItems={semesterItems}
-            onEdit={(title, label, index) =>
-              onEdit(milestone.id, title, label, index)
-            }
-            onDelete={() => onDelete(milestone.id)}
-          />
-        ) : (
-          <p
-            className={cn(
-              'text-sm leading-snug font-medium text-pretty',
-              status === 'rate' && 'text-muted-foreground line-through',
-            )}
-          >
-            {milestone.title}
-          </p>
-        )}
-
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-muted-foreground">
-            {capitalize(statusLabels[status])}
-          </span>
-          {late ? (
-            <Badge
-              variant="outline"
-              className="gap-1 border-amber-500/50 text-amber-700 dark:text-amber-300"
+        <div className="flex items-start gap-2">
+          {editingTitle ? (
+            <Input
+              value={title}
+              autoFocus
+              aria-label="Titre de l’objectif"
+              className="h-8 flex-1"
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={(e) => {
+                if (
+                  e.key === 'Enter' &&
+                  !e.nativeEvent.isComposing &&
+                  e.keyCode !== 229
+                ) {
+                  e.currentTarget.blur()
+                }
+                if (e.key === 'Escape') {
+                  setTitle(milestone.title)
+                  setEditingTitle(false)
+                }
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingTitle(true)}
+              className={cn(
+                'min-w-0 flex-1 rounded-sm pt-1 text-left text-sm leading-snug font-medium text-pretty outline-none hover:underline hover:decoration-muted-foreground/50 hover:underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring/50',
+                status === 'rate' && 'text-muted-foreground line-through',
+              )}
+              aria-label={`Modifier le titre : ${milestone.title}`}
             >
-              <ClockAlert aria-hidden="true" className="size-3" />
-              En retard
-            </Badge>
-          ) : null}
-          {milestone.added_after_validation && created ? (
-            <Badge variant="outline" className="text-muted-foreground">
-              Ajoutée le {formatDateFr(created)}
-            </Badge>
-          ) : null}
-        </div>
+              {milestone.title}
+            </button>
+          )}
 
-        <div className="flex flex-wrap items-center gap-1">
-          {canTrack ? (
-            <>
-              {status !== 'en_cours' && status !== 'fait' ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onStatusChange(milestone.id, 'en_cours')}
-                >
-                  Marquer en cours
-                </Button>
-              ) : null}
-              {status !== 'fait' ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onStatusChange(milestone.id, 'fait')}
-                >
-                  Marquer terminée
-                </Button>
-              ) : null}
-              {status !== 'rate' ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 text-muted-foreground"
-                        aria-label={`Plus d’actions pour l’étape ${milestone.title}`}
-                      />
-                    }
-                  >
-                    <Ellipsis />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-44">
-                    <DropdownMenuItem onClick={() => setRateOpen(true)}>
-                      Marquer ratée
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0 text-muted-foreground"
+                  aria-label={`Gérer l’objectif ${milestone.title}`}
+                />
+              }
+            >
+              <Ellipsis />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              <DropdownMenuItem onClick={() => setEditingTitle(true)}>
+                <Pencil />
+                Renommer
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setAddingSubGoal(true)}>
+                <ListPlus />
+                Ajouter un sous-objectif
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger disabled={!canDelete}>
+                  <ArrowRightLeft />
+                  Déplacer vers…
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-48">
+                  {moveTargets.map((target) => (
+                    <DropdownMenuItem
+                      key={target.index}
+                      disabled={target.full}
+                      onClick={() =>
+                        onUpdate((plan) =>
+                          editMilestone(
+                            plan,
+                            milestone.id,
+                            milestone.title,
+                            target.index,
+                            null,
+                          ),
+                        )
+                      }
+                    >
+                      {target.label}
+                      {target.full ? (
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          complet
+                        </span>
+                      ) : null}
                     </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              {!isDraft ? (
+                <DropdownMenuItem onClick={() => setHistoryOpen((v) => !v)}>
+                  <History />
+                  {historyOpen ? 'Masquer l’historique' : 'Voir l’historique'}
+                </DropdownMenuItem>
               ) : null}
-            </>
-          ) : null}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="ml-auto text-muted-foreground"
-            aria-expanded={historyOpen}
-            aria-controls={historyId}
-            onClick={() => setHistoryOpen((v) => !v)}
-          >
-            <History />
-            Historique
-          </Button>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={!canDelete}
+                onClick={() => onUpdate((plan) => deleteMilestone(plan, milestone.id))}
+              >
+                <Trash2 />
+                {canDelete ? 'Supprimer' : 'Seul objectif du semestre'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        <div aria-live="polite">
+        {!isDraft || late || (milestone.added_after_validation && created) ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {!isDraft ? (
+              <MilestoneStatusMenu
+                title={milestone.title}
+                status={status}
+                onSelect={handleStatusSelect}
+              />
+            ) : null}
+            {late ? (
+              <Badge
+                variant="outline"
+                className="gap-1 border-amber-500/50 text-amber-700 dark:text-amber-300"
+              >
+                <ClockAlert aria-hidden="true" className="size-3" />
+                En retard
+              </Badge>
+            ) : null}
+            {milestone.added_after_validation && created ? (
+              <Badge variant="outline" className="text-muted-foreground">
+                Ajouté le {formatDateFr(created)}
+              </Badge>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div aria-live="polite" className="empty:hidden">
           {rateOpen ? (
             <MilestoneRatePrompt
               title={milestone.title}
@@ -240,23 +287,32 @@ export function MilestoneNode({
                 setRateOpen(false)
               }}
               onAdjust={(newTitle, reason) => {
-                onStatusChange(milestone.id, 'rate', reason)
-                onEdit(
-                  milestone.id,
-                  newTitle,
-                  milestone.semester_label,
-                  milestone.semester_index,
-                  reason,
+                onUpdate((plan) =>
+                  editMilestone(
+                    plan,
+                    milestone.id,
+                    newTitle,
+                    milestone.semester_index,
+                    reason,
+                  ),
                 )
+                onStatusChange(milestone.id, 'a_faire', reason)
+                setTitle(newTitle)
                 setRateOpen(false)
               }}
             />
           ) : null}
         </div>
 
-        <div id={historyId}>
-          {historyOpen ? <MilestoneHistoryStack milestone={milestone} /> : null}
-        </div>
+        <SubGoalList
+          milestone={milestone}
+          canCheck={!isDraft}
+          adding={addingSubGoal}
+          onAddingChange={setAddingSubGoal}
+          onUpdate={onUpdate}
+        />
+
+        {historyOpen ? <MilestoneHistoryStack milestone={milestone} /> : null}
       </div>
     </li>
   )
