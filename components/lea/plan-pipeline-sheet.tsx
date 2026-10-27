@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PlanDraftBanner } from '@/components/lea/plan-draft-banner'
-import { PlanGlobalHistory } from '@/components/lea/plan-global-history'
+import { PlanHistoryBook } from '@/components/lea/plan-history-book'
 import { PlanValidatedBar } from '@/components/lea/plan-validated-bar'
 import { SemesterGroup } from '@/components/lea/semester-group'
 import {
@@ -48,17 +48,12 @@ export function PlanPipelineSheet({
   onMilestoneCompleted: (milestone: PlanMilestone) => void
 }) {
   const [tab, setTab] = useState<Tab>('parcours')
-  const [closedGroups, setClosedGroups] = useState<Set<number>>(
+  const [openGroups, setOpenGroups] = useState<Set<number>>(
     () =>
-      new Set(
-        buildSemesters(plan)
-          .filter(
-            (g) =>
-              g.milestones.length > 0 &&
-              g.milestones.every((m) => m.status === 'fait' || m.status === 'rate'),
-          )
-          .map((g) => g.index),
-      ),
+      new Set([
+        plan.current_semester_index,
+        ...(plan.stage === 'draft' ? emptySemesters(plan) : []),
+      ]),
   )
   const [pendingJump, setPendingJump] = useState<string | null>(null)
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
@@ -80,11 +75,7 @@ export function PlanPipelineSheet({
   const jumpToMilestone = (id: string) => {
     const milestone = plan.milestones.find((m) => m.id === id)
     if (!milestone) return
-    setClosedGroups((prev) => {
-      const next = new Set(prev)
-      next.delete(milestone.semester_index)
-      return next
-    })
+    setOpenGroups((prev) => new Set(prev).add(milestone.semester_index))
     setTab('parcours')
     setPendingJump(id)
   }
@@ -167,12 +158,12 @@ export function PlanPipelineSheet({
                 key={group.index}
                 group={group}
                 currentSemesterIndex={plan.current_semester_index}
-                open={!closedGroups.has(group.index)}
+                open={openGroups.has(group.index)}
                 onOpenChange={(next) =>
-                  setClosedGroups((prev) => {
+                  setOpenGroups((prev) => {
                     const copy = new Set(prev)
-                    if (next) copy.delete(group.index)
-                    else copy.add(group.index)
+                    if (next) copy.add(group.index)
+                    else copy.delete(group.index)
                     return copy
                   })
                 }
@@ -186,7 +177,7 @@ export function PlanPipelineSheet({
           </TabsContent>
 
           <TabsContent value="historique" className="p-4">
-            <PlanGlobalHistory
+            <PlanHistoryBook
               plan={plan}
               onJumpToMilestone={jumpToMilestone}
             />
