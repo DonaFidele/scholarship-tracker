@@ -7,6 +7,7 @@ import { LeaPlanSummaryCard } from '@/components/lea/lea-plan-summary-card'
 import { LeaQuickReplies } from '@/components/lea/lea-quick-replies'
 import { PlanPipelineSheet } from '@/components/lea/plan-pipeline-sheet'
 import { nextMilestone, planCounts } from '@/lib/milestone-helpers'
+import type { PlanUpdater } from '@/lib/plan-actions'
 import type {
   LeaChatState,
   LeaMessage,
@@ -39,18 +40,14 @@ export function LeaView({
   creatingPlan,
   prefillQuery,
   pipelineOpen,
-  adjusting,
   onPipelineOpenChange,
-  onToggleAdjustMode,
   onCreatePlan,
   onSendMessage,
   onRetryLastMessage,
   onValidatePlan,
   onRequestNewProposal,
   onMilestoneStatusChange,
-  onMilestoneEdit,
-  onMilestoneDelete,
-  onMilestoneAdd,
+  onPlanUpdate,
   onMilestoneCompleted,
 }: {
   plan: LeaPlan | null
@@ -59,9 +56,7 @@ export function LeaView({
   creatingPlan: boolean
   prefillQuery?: string
   pipelineOpen: boolean
-  adjusting: boolean
   onPipelineOpenChange: (open: boolean) => void
-  onToggleAdjustMode: () => void
   onCreatePlan: (title: string, horizonSemesters: number) => void
   onSendMessage: (text: string) => void
   onRetryLastMessage: () => void
@@ -72,19 +67,7 @@ export function LeaView({
     status: MilestoneStatus,
     reason?: string | null,
   ) => void
-  onMilestoneEdit: (
-    id: string,
-    newTitle: string,
-    semesterLabel: string,
-    semesterIndex: number,
-    reason?: string | null,
-  ) => void
-  onMilestoneDelete: (id: string) => void
-  onMilestoneAdd: (
-    title: string,
-    semesterLabel: string,
-    semesterIndex: number,
-  ) => void
+  onPlanUpdate: (updater: PlanUpdater) => void
   onMilestoneCompleted: (milestone: PlanMilestone) => void
 }) {
   if (!plan) {
@@ -123,14 +106,10 @@ export function LeaView({
         plan={plan}
         open={pipelineOpen}
         onOpenChange={onPipelineOpenChange}
-        adjusting={adjusting}
-        onToggleAdjustMode={onToggleAdjustMode}
         onValidatePlan={onValidatePlan}
         onRequestNewProposal={onRequestNewProposal}
         onMilestoneStatusChange={onMilestoneStatusChange}
-        onMilestoneEdit={onMilestoneEdit}
-        onMilestoneDelete={onMilestoneDelete}
-        onMilestoneAdd={onMilestoneAdd}
+        onPlanUpdate={onPlanUpdate}
         onMilestoneCompleted={onMilestoneCompleted}
       />
     </div>

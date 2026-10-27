@@ -6,9 +6,11 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
 export function PlanDraftBanner({
+  missingSemesters,
   onValidatePlan,
   onRequestNewProposal,
 }: {
+  missingSemesters: number[]
   onValidatePlan: () => void
   onRequestNewProposal: (reason: string | null) => void
 }) {
@@ -24,9 +26,22 @@ export function PlanDraftBanner({
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
-      <p className="text-sm font-medium text-pretty">
-        Brouillon — ajuste ce parcours puis valide-le.
-      </p>
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-medium text-pretty">
+          Brouillon — ajuste tes objectifs, puis valide ton parcours.
+        </p>
+        <p className="text-xs text-pretty text-muted-foreground">
+          1 à 3 objectifs par semestre, avec des sous-objectifs si besoin. Tu
+          pourras encore tout modifier après validation.
+        </p>
+        {missingSemesters.length > 0 ? (
+          <p role="status" className="text-xs font-medium text-amber-700 dark:text-amber-300">
+            {missingSemesters.length === 1
+              ? `Le semestre ${missingSemesters[0]} n’a aucun objectif.`
+              : `Les semestres ${missingSemesters.join(', ')} n’ont aucun objectif.`}
+          </p>
+        ) : null}
+      </div>
       {asking ? (
         <div className="flex flex-col gap-2">
           <Label htmlFor={fieldId}>
@@ -57,7 +72,11 @@ export function PlanDraftBanner({
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
-          <Button className="h-9" onClick={onValidatePlan}>
+          <Button
+            className="h-9"
+            disabled={missingSemesters.length > 0}
+            onClick={onValidatePlan}
+          >
             Valider ce parcours
           </Button>
           <Button
