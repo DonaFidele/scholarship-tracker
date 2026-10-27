@@ -4,7 +4,9 @@ import { LeaChatInput } from '@/components/lea/lea-chat-input'
 import { LeaChatThread } from '@/components/lea/lea-chat-thread'
 import { LeaIntroCard } from '@/components/lea/lea-intro-card'
 import { LeaPlanSummaryCard } from '@/components/lea/lea-plan-summary-card'
+import { LeaQuickReplies } from '@/components/lea/lea-quick-replies'
 import { PlanPipelineSheet } from '@/components/lea/plan-pipeline-sheet'
+import { nextMilestone, planCounts } from '@/lib/milestone-helpers'
 import type {
   LeaChatState,
   LeaMessage,
@@ -12,6 +14,23 @@ import type {
   MilestoneStatus,
   PlanMilestone,
 } from '@/lib/types'
+
+function quickReplies(plan: LeaPlan): string[] {
+  if (plan.stage === 'draft') {
+    return [
+      'Pourquoi cet ordre d’étapes ?',
+      'C’est trop chargé pour moi',
+      'Il manque quelque chose ?',
+    ]
+  }
+  const next = nextMilestone(plan)
+  const { late } = planCounts(plan)
+  const replies: string[] = []
+  if (next) replies.push(`Comment je m’y prends pour « ${next.title} » ?`)
+  if (late > 0) replies.push('Je suis en retard, on réorganise ?')
+  replies.push('Qu’est-ce qui rendrait mon dossier plus fort ?')
+  return replies
+}
 
 export function LeaView({
   plan,
@@ -79,11 +98,21 @@ export function LeaView({
       <LeaPlanSummaryCard
         plan={plan}
         onOpenPipeline={() => onPipelineOpenChange(true)}
+        onStatusChange={(id, status) => onMilestoneStatusChange(id, status)}
+        onMilestoneCompleted={onMilestoneCompleted}
       />
-      <LeaChatThread
-        messages={messages}
-        chatState={chatState}
-        onRetryLastMessage={onRetryLastMessage}
+      <div className="flex flex-col gap-3 pt-2">
+        <h2 className="text-sm font-semibold">Discuter avec Léa</h2>
+        <LeaChatThread
+          messages={messages}
+          chatState={chatState}
+          onRetryLastMessage={onRetryLastMessage}
+        />
+      </div>
+      <LeaQuickReplies
+        suggestions={quickReplies(plan)}
+        disabled={chatState === 'sending'}
+        onPick={onSendMessage}
       />
       <LeaChatInput
         chatState={chatState}

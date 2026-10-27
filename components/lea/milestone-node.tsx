@@ -2,7 +2,7 @@
 
 import { useId, useState } from 'react'
 import { cn } from 'cn'
-import { Check, ClockAlert, Ellipsis, History, X } from 'lucide-react'
+import { Check, ClockAlert, Ellipsis, History, Play, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -85,14 +85,10 @@ export function MilestoneNode({
         />
       ) : null}
 
-      <button
-        type="button"
-        aria-expanded={historyOpen}
-        aria-controls={historyId}
-        aria-label={`${milestone.semester_label}, ${milestone.title}, statut : ${statusLabels[status]}${late ? ', en retard' : ''}`}
-        onClick={() => setHistoryOpen((v) => !v)}
+      <span
+        aria-hidden="true"
         className={cn(
-          'relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+          'relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full',
           circleStyles[status],
           late &&
             'ring-2 ring-amber-500 ring-offset-2 ring-offset-background',
@@ -125,7 +121,7 @@ export function MilestoneNode({
             <ClockAlert className="size-2.5" />
           </span>
         ) : null}
-      </button>
+      </span>
 
       <div
         className={cn(
@@ -173,64 +169,65 @@ export function MilestoneNode({
           ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1">
-          {canTrack ? (
-            <>
-              {status !== 'en_cours' && status !== 'fait' ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onStatusChange(milestone.id, 'en_cours')}
-                >
-                  Marquer en cours
-                </Button>
-              ) : null}
-              {status !== 'fait' ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onStatusChange(milestone.id, 'fait')}
-                >
-                  Marquer terminée
-                </Button>
-              ) : null}
-              {status !== 'rate' ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 text-muted-foreground"
-                        aria-label={`Plus d’actions pour l’étape ${milestone.title}`}
-                      />
-                    }
+        {canTrack ? (
+          <div className="flex flex-wrap items-center gap-1">
+            {status === 'a_faire' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onStatusChange(milestone.id, 'en_cours')}
+              >
+                <Play data-icon="inline-start" />
+                Je commence
+              </Button>
+            ) : null}
+            {status === 'en_cours' ? (
+              <Button
+                size="sm"
+                onClick={() => onStatusChange(milestone.id, 'fait')}
+              >
+                <Check data-icon="inline-start" />
+                C’est fait
+              </Button>
+            ) : null}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 text-muted-foreground"
+                    aria-label={`Plus d’actions pour l’étape ${milestone.title}`}
+                  />
+                }
+              >
+                <Ellipsis />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-52">
+                {status === 'a_faire' ? (
+                  <DropdownMenuItem
+                    onClick={() => onStatusChange(milestone.id, 'fait')}
                   >
-                    <Ellipsis />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-44">
-                    <DropdownMenuItem onClick={() => setRateOpen(true)}>
-                      Marquer ratée
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : null}
-            </>
-          ) : null}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="ml-auto text-muted-foreground"
-            aria-expanded={historyOpen}
-            aria-controls={historyId}
-            onClick={() => setHistoryOpen((v) => !v)}
-          >
-            <History />
-            Historique
-          </Button>
-        </div>
+                    <Check />
+                    Déjà terminée
+                  </DropdownMenuItem>
+                ) : null}
+                {status === 'a_faire' || status === 'en_cours' ? (
+                  <DropdownMenuItem onClick={() => setRateOpen(true)}>
+                    <X />
+                    Je n’ai pas pu la faire
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem onClick={() => setHistoryOpen((v) => !v)}>
+                  <History />
+                  {historyOpen ? 'Masquer l’historique' : 'Voir l’historique'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : null}
 
-        <div aria-live="polite">
+        <div aria-live="polite" className="empty:hidden">
           {rateOpen ? (
             <MilestoneRatePrompt
               title={milestone.title}

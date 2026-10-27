@@ -53,6 +53,19 @@ export function planCounts(plan: LeaPlan): {
   }
 }
 
+/** The step to focus on now: earliest open semester first, in-progress before to-do. */
+export function nextMilestone(plan: LeaPlan): PlanMilestone | null {
+  const open = plan.milestones.filter(
+    (m) => m.status === 'en_cours' || m.status === 'a_faire',
+  )
+  open.sort(
+    (a, b) =>
+      a.semester_index - b.semester_index ||
+      Number(b.status === 'en_cours') - Number(a.status === 'en_cours'),
+  )
+  return open[0] ?? null
+}
+
 export type SemesterGroup = {
   index: number
   label: string

@@ -65,7 +65,16 @@ export function PlanPipelineSheet({
   onMilestoneCompleted: (milestone: PlanMilestone) => void
 }) {
   const [tab, setTab] = useState<Tab>('parcours')
-  const [closedGroups, setClosedGroups] = useState<Set<number>>(new Set())
+  const [closedGroups, setClosedGroups] = useState<Set<number>>(
+    () =>
+      new Set(
+        groupBySemester(plan.milestones)
+          .filter((g) =>
+            g.milestones.every((m) => m.status === 'fait' || m.status === 'rate'),
+          )
+          .map((g) => g.index),
+      ),
+  )
   const [pendingJump, setPendingJump] = useState<string | null>(null)
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
 
@@ -144,7 +153,7 @@ export function PlanPipelineSheet({
                   Parcours
                 </TabsTrigger>
                 <TabsTrigger value="historique" className="px-3">
-                  Historique global
+                  Historique
                 </TabsTrigger>
               </TabsList>
             </div>

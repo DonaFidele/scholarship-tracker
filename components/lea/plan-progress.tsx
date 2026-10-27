@@ -1,9 +1,5 @@
 import { cn } from 'cn'
-import {
-  Progress,
-  ProgressIndicator,
-  ProgressTrack,
-} from '@/components/ui/progress'
+import { Progress } from '@/components/ui/progress'
 
 export function PlanProgress({
   done,
@@ -31,17 +27,17 @@ export function PlanProgress({
       <p className="text-sm font-medium tabular-nums">
         {done} sur {total} étapes terminées — {percent}%
       </p>
+      {/* Progress renders its own track + indicator, so style them via data-slot instead of adding a second bar. */}
       <Progress
         value={percent}
         aria-label={`${done} étapes terminées sur ${total}`}
-        className="w-full"
-      >
-        <ProgressTrack className="h-1.5">
-          <ProgressIndicator
-            className={cn(allDone ? 'bg-emerald-500' : 'bg-indigo-500')}
-          />
-        </ProgressTrack>
-      </Progress>
+        className={cn(
+          'w-full [&_[data-slot=progress-track]]:h-2',
+          allDone
+            ? '[&_[data-slot=progress-indicator]]:bg-emerald-500'
+            : '[&_[data-slot=progress-indicator]]:bg-indigo-500',
+        )}
+      />
     </div>
   )
 }
