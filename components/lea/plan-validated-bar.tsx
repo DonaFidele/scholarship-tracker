@@ -14,7 +14,7 @@ export function PlanValidatedBar({
       <PlanProgress done={done} total={total} percent={percent} />
       <p className="text-xs text-pretty text-muted-foreground">
         Change le statut d’un objectif avec sa pastille. Clique sur un titre pour
-        le renommer, ou utilise « ⋯ » pour le déplacer, le supprimer ou ajouter
+        le renommer, ou utilise le menu « ... » pour le déplacer, le supprimer ou ajouter
         des sous-objectifs.
       </p>
     </div>
