@@ -1,9 +1,11 @@
+import { MAX_OBJECTIVES_PER_SEMESTER } from '@/lib/milestone-helpers'
 import type {
   LeaMessage,
   LeaPlan,
   MilestoneEvent,
   MilestoneEventType,
   PlanMilestone,
+  SubGoal,
 } from '@/lib/types'
 
 function event(
@@ -23,6 +25,38 @@ function event(
   }
 }
 
+function subGoals(milestoneId: string, items: [string, boolean][]): SubGoal[] {
+  return items.map(([title, done], i) => ({
+    id: `${milestoneId}-sg-${i + 1}`,
+    title,
+    done,
+  }))
+}
+
+const demoSubGoals: Record<string, [string, boolean][]> = {
+  'ms-1': [
+    ['Comparer les prérequis de chaque programme', true],
+    ['Noter les dates limites', true],
+  ],
+  'ms-2': [
+    ['Revoir probabilités et lois usuelles', true],
+    ['Terminer un cours en ligne de statistiques', false],
+    ['Faire 20 exercices corrigés', false],
+  ],
+  'ms-4': [
+    ['Identifier 3 mentors possibles sur LinkedIn', true],
+    ['Préparer 5 questions à poser', false],
+  ],
+  'ms-6': [
+    ['Choisir entre IELTS et TOEFL', false],
+    ['Réserver une date d’examen', false],
+  ],
+}
+
+function withSubGoals(list: Omit<PlanMilestone, 'sub_goals'>[]): PlanMilestone[] {
+  return list.map((m) => ({ ...m, sub_goals: subGoals(m.id, demoSubGoals[m.id] ?? []) }))
+}
+
 export function getMockLeaPlan(): LeaPlan {
   return {
     id: 'plan-ml-stanford',
@@ -30,7 +64,7 @@ export function getMockLeaPlan(): LeaPlan {
     horizon_semesters: 6,
     current_semester_index: 3,
     stage: 'validated',
-    milestones: [
+    milestones: withSubGoals([
       {
         id: 'ms-1',
         title: 'Lister 5 programmes cibles',
@@ -135,8 +169,24 @@ export function getMockLeaPlan(): LeaPlan {
         added_after_validation: false,
         events: [event('ev-8a', 'creee', '2026-02-02T09:00:00.000Z')],
       },
-    ],
+    ]),
   }
+}
+
+/** Nearest semester that still has room, so a draft never exceeds the per-semester cap. */
+function placeInSemester(wanted: number, horizon: number, counts: number[]) {
+  for (let distance = 0; distance < horizon; distance += 1) {
+    for (const candidate of [wanted - distance, wanted + distance]) {
+      if (
+        candidate >= 1 &&
+        candidate <= horizon &&
+        (counts[candidate] ?? 0) < MAX_OBJECTIVES_PER_SEMESTER
+      ) {
+        return candidate
+      }
+    }
+  }
+  return null
 }
 
 const draftTemplates: { title: string; semester: number }[][] = [
@@ -168,9 +218,14 @@ export function getMockLeaDraftPlan(
 ): LeaPlan {
   const now = new Date().toISOString()
   const template = draftTemplates[variant % draftTemplates.length]
-  const milestones: PlanMilestone[] = template.map((item, i) => {
-    const semester = Math.min(item.semester, Math.max(horizonSemesters, 1))
-    return {
+  const horizon = Math.max(horizonSemesters, 1)
+  const counts: number[] = []
+  const milestones: PlanMilestone[] = []
+  template.forEach((item, i) => {
+    const semester = placeInSemester(Math.min(item.semester, horizon), horizon, counts)
+    if (semester === null) return
+    counts[semester] = (counts[semester] ?? 0) + 1
+    milestones.push({
       id: `draft-${variant}-${i + 1}`,
       title: item.title,
       semester_label: `Semestre ${semester}`,
@@ -179,7 +234,8 @@ export function getMockLeaDraftPlan(
       related_field: null,
       added_after_validation: false,
       events: [event(`draft-${variant}-${i + 1}-c`, 'creee', now)],
-    }
+      sub_goals: [],
+    })
   })
   return {
     id: `plan-draft-${variant}`,

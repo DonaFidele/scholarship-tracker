@@ -19,6 +19,41 @@ export const eventLabels: Record<MilestoneEventType, string> = {
   marquee_en_cours: 'Marquée en cours',
   marquee_faite: 'Marquée terminée',
   marquee_ratee: 'Marquée ratée',
+  remise_a_faire: 'Remise à faire',
+}
+
+export const MIN_OBJECTIVES_PER_SEMESTER = 1
+export const MAX_OBJECTIVES_PER_SEMESTER = 3
+
+export function semesterLabel(index: number) {
+  return `Semestre ${index}`
+}
+
+export function objectivesInSemester(plan: LeaPlan, index: number): number {
+  return plan.milestones.filter((m) => m.semester_index === index).length
+}
+
+export function semesterCount(plan: LeaPlan): number {
+  const maxUsed = plan.milestones.reduce(
+    (max, m) => Math.max(max, m.semester_index),
+    0,
+  )
+  return Math.max(plan.horizon_semesters, maxUsed, 1)
+}
+
+/** Every semester of the plan, including empty ones, so each can be filled. */
+export function buildSemesters(plan: LeaPlan): SemesterGroup[] {
+  return Array.from({ length: semesterCount(plan) }, (_, i) => ({
+    index: i + 1,
+    label: semesterLabel(i + 1),
+    milestones: plan.milestones.filter((m) => m.semester_index === i + 1),
+  }))
+}
+
+export function emptySemesters(plan: LeaPlan): number[] {
+  return buildSemesters(plan)
+    .filter((g) => g.milestones.length < MIN_OBJECTIVES_PER_SEMESTER)
+    .map((g) => g.index)
 }
 
 /** True only if the milestone is still open and its semester is already behind us. */
