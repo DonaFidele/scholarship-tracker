@@ -48,11 +48,11 @@ export function MilestoneStatusMenu({
         <ChevronDown aria-hidden="true" className="size-3 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
-        <DropdownMenuLabel>Changer le statut</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={status}
           onValueChange={(value) => onSelect(value as MilestoneStatus)}
         >
+          <DropdownMenuLabel>Changer le statut</DropdownMenuLabel>
           {options.map((option) => (
             <DropdownMenuRadioItem key={option.value} value={option.value}>
               <span
