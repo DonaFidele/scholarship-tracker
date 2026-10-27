@@ -9,9 +9,12 @@ export const metadata: Metadata = {
 export default async function LeaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string | string[] }>
+  searchParams: Promise<{ q?: string | string[]; demo?: string | string[] }>
 }) {
-  const { q } = await searchParams
+  const { q, demo } = await searchParams
   const prefillQuery = Array.isArray(q) ? q[0] : q
-  return <LeaPageClient prefillQuery={prefillQuery} />
+  const demoValue = Array.isArray(demo) ? demo[0] : demo
+  return (
+    <LeaPageClient prefillQuery={prefillQuery} demo={demoValue === '1'} />
+  )
 }
