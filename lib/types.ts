@@ -130,20 +130,50 @@ export type SearchStatus = 'idle' | 'loading' | 'error' | 'success'
 
 export type DetailsState = 'idle' | 'loading' | 'error' | 'ready'
 
-export type MilestoneStatus = 'a_faire' | 'en_cours' | 'fait'
+export type MilestoneStatus = 'a_faire' | 'en_cours' | 'fait' | 'rate'
+
+export type MilestoneEventType =
+  | 'creee'
+  | 'ajustee'
+  | 'marquee_en_cours'
+  | 'marquee_faite'
+  | 'marquee_ratee'
+
+export type MilestoneEvent = {
+  id: string
+  type: MilestoneEventType
+  /** ISO date. */
+  at: string
+  /** Set only for "ajustee". */
+  previous_title: string | null
+  /** Set only for "ajustee". */
+  new_title: string | null
+  /** Optional note (why adjusted, why failed). */
+  reason: string | null
+}
 
 export type PlanMilestone = {
   id: string
   title: string
+  /** e.g. "Semestre 2". */
   semester_label: string
+  /** 1-based, used for ordering and "late" detection. */
+  semester_index: number
   status: MilestoneStatus
   related_field: FieldKey | null
+  added_after_validation: boolean
+  events: MilestoneEvent[]
 }
+
+export type PlanStage = 'draft' | 'validated'
 
 export type LeaPlan = {
   id: string
   target_title: string
   horizon_semesters: number
+  /** Used to compute "late". */
+  current_semester_index: number
+  stage: PlanStage
   milestones: PlanMilestone[]
 }
 
